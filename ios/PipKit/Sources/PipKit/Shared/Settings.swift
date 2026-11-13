@@ -28,7 +28,13 @@ public final class Settings {
         static let threshold = "PipExpressionThreshold", listener = "PipListener", name = "PipChildName"
     }
 
-    public static let defaultBaseURL = URL(string: "http://localhost:3000")!
+    /// The server named at build time (PIP_SERVER_URL in Local.xcconfig), so a
+    /// phone can reach the Mac running it. Falls back to localhost.
+    public static let defaultBaseURL: URL = {
+        if let s = Bundle.main.object(forInfoDictionaryKey: "PipServerURL") as? String,
+           let u = URL(string: s), u.scheme != nil, u.host != nil { return u }
+        return URL(string: "http://localhost:3000")!
+    }()
 
     public var baseURL: URL { didSet { UserDefaults.standard.set(baseURL.absoluteString, forKey: Key.baseURL) } }
     /// The reader's first name for the greeting. Empty until they tell us.

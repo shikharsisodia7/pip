@@ -1,3 +1,7 @@
-// Shared build settings. Personal settings (DEVELOPMENT_TEAM for a physical
-// device) go in ios/Local.xcconfig, which is never committed.
+// Shared build settings. Personal settings go in ios/Local.xcconfig, which is
+// never committed: DEVELOPMENT_TEAM for a physical device, and PIP_SERVER_URL
+// set to this Mac's network address so a phone can reach the server, e.g.
+//   PIP_SERVER_URL = http:/$()/192.168.1.20:3000
+// (the $() keeps xcconfig from reading // as a comment).
+PIP_SERVER_URL = http:/$()/localhost:3000
 #include? "../Local.xcconfig"
