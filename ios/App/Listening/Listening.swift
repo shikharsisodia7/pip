@@ -22,11 +22,11 @@ enum ListenStatus { case idle, connecting, listening, error }
 }
 
 enum Listeners {
-    /// Mock in mock mode; otherwise the live listener chosen in Settings.
+    /// The scripted listener in mock mode; otherwise the live listener chosen in Settings.
     @MainActor static func make() -> any Listening {
         if Settings.shared.mock { return MockListener() }
         switch Settings.shared.listenerKind {
-        case .scribe, .apple: return MockListener()
+        case .scribe, .apple: return AppleListener()
         }
     }
 }
