@@ -29,7 +29,8 @@ public enum AnswerVerdict: String, Sendable, Equatable {
 /// Every answer is stated in that page's text.
 public let playtimeQuestions: [StoryQuestion] = [
     StoryQuestion(question: "Who was as round as a drum?",
-                  acceptedAnswers: [["golu"], ["elephant"]],
+                  // Speech recognition sometimes hears "Golu" as these, so they count too.
+                  acceptedAnswers: [["golu"], ["elephant"], ["gollu"], ["goolu"], ["golo"], ["baloo"], ["gulu"]],
                   hint: "Think about the big animal on this page.",
                   answerLine: "It was Golu the elephant!"),
     StoryQuestion(question: "What did Golu want to play today?",
@@ -41,7 +42,7 @@ public let playtimeQuestions: [StoryQuestion] = [
                   hint: "It was the little one who looked like a ball of cotton.",
                   answerLine: "It was Chhotu the rabbit!"),
     StoryQuestion(question: "Where did Chhotu land?",
-                  acceptedAnswers: [["back"], ["golus"], ["golu"]],
+                  acceptedAnswers: [["back"], ["golus"], ["golu"], ["gollu"], ["baloo"], ["elephant"]],
                   hint: "He landed on top of his big friend.",
                   answerLine: "Chhotu landed on Golu's back!"),
     StoryQuestion(question: "What came down on Golu's head?",

@@ -40,6 +40,8 @@ final class StoryQuestionsTests: XCTestCase {
         XCTAssertEqual(judgeAnswer("Chotu", for: playtimeQuestions[2]), .correct)
         XCTAssertEqual(judgeAnswer("coconut", for: playtimeQuestions[4]), .correct)
         XCTAssertEqual(judgeAnswer("he was scard", for: playtimeQuestions[5]), .correct)
+        XCTAssertEqual(judgeAnswer("Baloo", for: playtimeQuestions[0]), .correct)
+        XCTAssertEqual(judgeAnswer("Gollu the elephant", for: playtimeQuestions[0]), .correct)
     }
 
     func testFallbackWithAName() {
