@@ -1,6 +1,6 @@
 // FROZEN shared server helper. Do not edit; ask the bootstrap owner for changes.
-// Disk cache under .cache/ (gitignored). In worktrees .cache is a symlink to the
-// main checkout's cache, so every workspace shares Claude and TTS results.
+// Disk cache under .cache/ (gitignored). .cache may be a symlink to a shared
+// folder so several local checkouts reuse the same Claude and TTS results.
 
 import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';

@@ -20,8 +20,8 @@ if echo "$tracked" | grep -E '(^|/)\.env' | grep -v '\.env\.example$' >/dev/null
   report "an env file other than .env.example is tracked"
 fi
 
-if echo "$tracked" | grep -E '^\.cache(/|$)' >/dev/null; then
-  report ".cache/ is tracked"
+if echo "$tracked" | grep -E '^(\.cache(/|$)|\.superset/)' >/dev/null; then
+  report ".cache or local tooling config is tracked"
 fi
 
 patterns=(
