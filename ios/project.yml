@@ -40,6 +40,7 @@ targets:
         NSCameraUsageDescription: Snap a page of any book so you can read it to Pip.
         NSSpeechRecognitionUsageDescription: Pip turns your reading into words so it can light up each word you read.
         NSLocalNetworkUsageDescription: Pip talks to the reading server on this network.
+        PipServerURL: $(PIP_SERVER_URL)
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
     settings:
