@@ -74,8 +74,8 @@ export function validatePracticeBook(value: unknown, patternId: string): Practic
 
   book.sentences.forEach((sentence, index) => {
     const words = tokenize(sentence);
-    if (!/^[^.!?\u2014]+[.!?]$/.test(sentence) || words.length > 10 || sentence.length > 90) {
-      throw new Error(`Sentence ${index + 1} must be one short sentence, at most 10 words and 90 characters, with no em dashes.`);
+    if (!/^[^.!?\u2014]+[.!?]$/.test(sentence) || words.length > 10 || sentence.length > 65) {
+      throw new Error(`Sentence ${index + 1} must be one short sentence, at most 10 words and 65 characters, with no em dashes.`);
     }
     if (!words.some((word) => target.test(word))) {
       throw new Error(`Sentence ${index + 1} needs a word matching pattern ${patternId}, such as ${target.example}.`);
@@ -93,7 +93,7 @@ export async function createPracticeBook(pattern: PatternFinding, mock: boolean)
     'Give it a short title and exactly 6 short, decodable sentences.',
     'Use kindergarten to grade 2 vocabulary and a tiny story arc starring an owl named Pip.',
     'Make the sentences dense with the target pattern. Every sentence must include at least one matching word.',
-    'Use at most 10 words and 90 characters per sentence. End each sentence with punctuation.',
+    'Use at most 10 words and 65 characters per sentence. End each sentence with punctuation.',
     'Use a warm tone. No grades, scores, em dashes, or extra sentences.',
     `Return { "title": string, "pattern": ${JSON.stringify({ ...pattern, evidenceWords: [], confidence: 0 })}, "sentences": string[] }.`,
   ].join('\n');

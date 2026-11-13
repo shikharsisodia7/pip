@@ -72,6 +72,7 @@ describe('practice book validation and retry', () => {
     'Pip took flight. It was night.',
     'Pip took flight\u2014at night.',
     'Pip took flight',
+    'thought '.repeat(9) + 'thought.',
   ])('rejects copy that is too long or is not a single sentence: %s', (sentence) => {
     expect(() => validatePracticeBook({ ...valid, sentences: [sentence, ...valid.sentences.slice(1)] }, 'igh'))
       .toThrow('Sentence 1 must be one short sentence');
