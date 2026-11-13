@@ -96,8 +96,7 @@ struct ExpressionScreen: View {
                         pip
                         lineCard
                     }
-                    PitchContourView(frames: frames, active: stage == .recording)
-                        .frame(minHeight: 110, maxHeight: .infinity)
+                    Spacer(minLength: 0)
                     controls
                 }
                 .padding(.horizontal, 28)
@@ -145,8 +144,7 @@ struct ExpressionScreen: View {
             .frame(minHeight: 100)
             .animation(.spring(duration: 0.3), value: bubble)
             lineCard
-            PitchContourView(frames: frames, active: stage == .recording)
-                .frame(minHeight: 130, maxHeight: .infinity)
+            Spacer(minLength: 0)
             portraitControls
         }
         .padding(.horizontal, 20)

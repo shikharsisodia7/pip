@@ -254,7 +254,7 @@ struct ReadScreen: View {
                     .foregroundStyle(Palette.accent)
             }
         } else {
-            VStack(spacing: 8) {
+            VStack(spacing: 18) {
                 if !isListening {
                     BigButton("Hear Pip read it first", variant: .secondary, systemImage: "ear.fill") { echoRead() }
                         .disabled(echoIndex != nil)
