@@ -40,6 +40,9 @@ struct ReportScreen: View {
                     if let e = session.expression {
                         tile("theatermasks.fill", Palette.orangeOrb, String(format: "%.1fx", e.score), "more expression than your first read")
                     }
+                    if understanding.asked > 0 {
+                        tile("bubble.left.and.text.bubble.right.fill", Palette.blueOrb, "\(understanding.correct)/\(understanding.asked)", "story questions")
+                    }
                     tile("star.fill", Palette.orangeOrb, "+\(max(0, session.rewards.stars - session.startStars))", "stars today")
                 }
 
@@ -55,6 +58,10 @@ struct ReportScreen: View {
                                 .font(.pip(22, .bold)).foregroundStyle(.white)
                             Text("For grown-ups: \(p.teacherLabel)")
                                 .font(.pip(14, .semibold)).foregroundStyle(.white.opacity(0.8))
+                            if understanding.asked > 0 {
+                                Text("Understanding: answered \(understanding.correct) of \(understanding.asked) story questions.")
+                                    .font(.pip(14, .semibold)).foregroundStyle(.white.opacity(0.8))
+                            }
                             let words = session.trickyWords
                             if !words.isEmpty {
                                 Text("Tricky today: " + words.prefix(6).joined(separator: ", "))
@@ -84,7 +91,10 @@ struct ReportScreen: View {
                     if session.diagnosis != nil {
                         BigButton("Pip's Practice Book", variant: .secondary, systemImage: "book.closed.fill") { showPractice = true }
                     }
-                    BigButton("Back home", systemImage: "house.fill") { session.reset() }
+                    BigButton("Back home", systemImage: "house.fill") {
+                        ComprehensionLog.shared.clear()
+                        session.reset()
+                    }
                 }
                 .padding(.top, 4)
             }
@@ -95,6 +105,9 @@ struct ReportScreen: View {
         .sheet(isPresented: $showPractice) { PracticeScreen().environment(session) }
         .onAppear { if previous == nil { previous = ReadingLog.shared.sessions.first } }
     }
+
+    /// Story questions answered this session (from ComprehensionLog).
+    private var understanding: (correct: Int, asked: Int) { ComprehensionLog.shared.totals(bookId: session.book.id) }
 
     private func accuracy(_ s: SessionSummary) -> Int? {
         s.wordsTotal > 0 ? Int((Double(s.wordsCorrect) / Double(s.wordsTotal) * 100).rounded()) : nil

@@ -25,6 +25,8 @@ struct ReadScreen: View {
     @State private var echoIndex: Int?
     @State private var echoPages: Set<Int> = []
     @State private var yourTurn = false
+    // Story question (comprehension check). Optional; never blocks moving on.
+    @State private var showQuestion = false
 
     private var book: Book { session.book }
     private var index: Int { session.readPageIndex }
@@ -68,6 +70,16 @@ struct ReadScreen: View {
                             Text(error).font(.pip(15, .semibold)).foregroundStyle(Palette.sun).multilineTextAlignment(.center)
                         }
                         if finished { resultCard.id("result") }
+                        if finished, showQuestion, let page {
+                            StoryQuestionCard(question: storyQuestion(bookId: book.id, pageIndex: index, pageText: page.text)) { verdict, tries in
+                                if tries > 0 {
+                                    ComprehensionLog.shared.record(page: index, bookId: book.id, verdict: verdict, tries: tries)
+                                }
+                                withAnimation { showQuestion = false }
+                            }
+                            .id("question-\(index)")
+                            .transition(.scale(scale: 0.95).combined(with: .opacity))
+                        }
                     }
                     .padding(.bottom, 12)
                 }
@@ -75,6 +87,13 @@ struct ReadScreen: View {
                     guard finished else { return }
                     try? await Task.sleep(for: .milliseconds(350))
                     withAnimation(.spring(duration: 0.5)) { proxy.scrollTo("result", anchor: .bottom) }
+                }
+                .onChange(of: showQuestion) { _, open in
+                    guard open else { return }
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(300))
+                        withAnimation(.spring(duration: 0.5)) { proxy.scrollTo("question-\(index)", anchor: .bottom) }
+                    }
                 }
             }
             controls
@@ -94,7 +113,7 @@ struct ReadScreen: View {
         .overlay {
             if confetti > 0 { Celebration().id(confetti).allowsHitTesting(false) }
         }
-        .onChange(of: index) { resetPage() }
+        .onChange(of: index) { resetPage(); showQuestion = false }
     }
 
     // MARK: Pieces
@@ -103,6 +122,7 @@ struct ReadScreen: View {
         HStack(spacing: 12) {
             OrbButton(systemImage: "xmark", colors: Palette.blueOrb, size: 44) {
                 Task { await stopListening(save: false) }
+                ComprehensionLog.shared.clear()
                 session.reset()
             }
             VStack(alignment: .leading, spacing: 6) {
@@ -222,6 +242,20 @@ struct ReadScreen: View {
                         }
                         Text("Tap a word to hear Pip help with it.")
                             .font(.pip(13, .semibold)).foregroundStyle(.white.opacity(0.7))
+                    }
+                    if !thinking, !showQuestion {
+                        if let answered = ComprehensionLog.shared.entry(page: index, bookId: book.id) {
+                            Text(answered.correct ? "You answered Pip's question!" : "Thanks for answering Pip's question!")
+                                .font(.pip(14, .semibold)).foregroundStyle(.white.opacity(0.8))
+                        } else {
+                            Button { withAnimation { showQuestion = true } } label: {
+                                Label("Pip has a question!", systemImage: "questionmark.bubble.fill")
+                                    .font(.pip(16, .bold)).foregroundStyle(Palette.ink)
+                                    .padding(.horizontal, 14).padding(.vertical, 8)
+                                    .background(Capsule().fill(Palette.sun))
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
                     if !echoPages.isEmpty, !thinking {
                         Text("Pip read first on \(echoPages.count) \(echoPages.count == 1 ? "page" : "pages")")
@@ -360,6 +394,13 @@ struct ReadScreen: View {
 
     private func registerDebug() {
         session.registerDebugAction("Read this page with a sample reading") { sampleReading() }
+        session.registerDebugAction("Answer the story question correctly") {
+            guard let page else { return }
+            let q = storyQuestion(bookId: book.id, pageIndex: index, pageText: page.text)
+            let answer = q.acceptedAnswers.first?.joined(separator: " ") ?? q.contentWords.prefix(3).joined(separator: " ")
+            ComprehensionLog.shared.injectedAnswer = answer
+            MockListener.inject(answer)
+        }
         session.registerDebugAction("Show Pip's help for the next word") {
             showHint(at: marks.firstIndex(of: .current) ?? 0)
         }
