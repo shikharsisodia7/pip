@@ -10,7 +10,6 @@ struct ReadScreen: View {
     @Environment(Session.self) private var session
     @Environment(\.horizontalSizeClass) private var hSize
     @State private var listener: (any Listening)?
-    @State private var prosody = ProsodyRecorder()
     @State private var finalMarks: [WordMark] = []
     @State private var finished = false
     @State private var thinking = false
@@ -296,7 +295,6 @@ struct ReadScreen: View {
                     listener = nil
                     return
                 }
-                prosody.start()
                 startStallWatch(l)
                 // A blocked microphone delivers exact zeros. Say so instead of
                 // letting the child read to a Pip who cannot hear.
@@ -313,7 +311,6 @@ struct ReadScreen: View {
         watchTask?.cancel()
         watchTask = nil
         withAnimation(.spring(duration: 0.35)) { activeHint = nil }
-        let stats = prosody.stop()
         let transcript = await l.stop()
         listener = nil
         guard save else { return }
@@ -321,17 +318,16 @@ struct ReadScreen: View {
             error = "Pip didn't hear any words. Try reading a little louder?"
             return
         }
-        finish(transcript, prosody: stats)
+        finish(transcript)
     }
 
-    private func finish(_ transcript: Transcript, prosody stats: ProsodyStats?) {
+    private func finish(_ transcript: Transcript) {
         guard let page else { return }
         let alignment = alignWords(expectedText: page.text, transcript: transcript)
         let metrics = computeMetrics(alignment)
         let result = ReadResult(transcript: transcript, alignment: alignment, metrics: metrics)
         session.read = result
         session.pagesRead[index] = result
-        if let stats, stats.voicedFrames > 0 { session.baselineProsody = stats }
         Library.shared.markRead(book.id, page: index)
         finalMarks = PipKit.marks(for: alignment)
         withAnimation(.spring) { finished = true }
@@ -432,7 +428,7 @@ struct ReadScreen: View {
 
     private func sampleReading() {
         guard let page else { return }
-        finish(SampleReading.transcript(for: page.text), prosody: nil)
+        finish(SampleReading.transcript(for: page.text))
     }
 }
 

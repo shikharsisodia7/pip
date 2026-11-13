@@ -104,9 +104,9 @@ public final class Session {
         phase = .pipReads
     }
 
-    /// Ends the book: the feeling moment if the book has a line for it, then the report.
+    /// Ends the book and shows what the child did.
     public func finishBook() {
-        phase = book.pages.contains { $0.emotionLine != nil } ? .expression : .report
+        phase = .report
     }
 
     /// After the child has read, Pip reads the page after the last one they
