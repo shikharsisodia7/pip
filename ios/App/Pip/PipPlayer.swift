@@ -56,6 +56,15 @@ final class PipPlayer {
            p.prepareToPlay(), p.play() {
             audioUnavailable = false
             player = p
+            if words.isEmpty, onWord != nil {
+                // Expressive audio has no word timings: spread the words across the clip.
+                let parts = PipVoiceText.stripAudioTags(request.text).split(whereSeparator: { $0.isWhitespace })
+                let lead = 0.15, span = max(0.5, p.duration - lead - 0.2)
+                let step = span / Double(max(1, parts.count))
+                words = parts.enumerated().map { i, w in
+                    TimedWord(text: String(w), start: lead + Double(i) * step, end: lead + Double(i + 1) * step)
+                }
+            }
             var next = 0
             while token == myToken, p.isPlaying {
                 let t = p.currentTime

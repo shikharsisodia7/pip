@@ -22,6 +22,10 @@ struct ReadScreen: View {
     @State private var activeHint: ActiveHint?
     @State private var helpedWords: [String] = []
     @State private var watchTask: Task<Void, Never>?
+    // Echo reading: Pip reads the page first, purely as a model. Never scored or saved.
+    @State private var echoIndex: Int?
+    @State private var echoPages: Set<Int> = []
+    @State private var yourTurn = false
 
     private var book: Book { session.book }
     private var index: Int { session.readPageIndex }
@@ -35,6 +39,9 @@ struct ReadScreen: View {
 
     private var marks: [WordMark] {
         guard let page else { return [] }
+        if let e = echoIndex {
+            return tokenizeDisplay(page.text).indices.map { i in i < e ? .correct : (i == e ? .current : .pending) }
+        }
         if let l = listener, isListening {
             return liveMarks(expectedText: page.text, transcript: l.liveTranscript)
         }
@@ -127,6 +134,12 @@ struct ReadScreen: View {
             PipView(state: pipState, size: finished ? 70 : 86)
                 .padding(.trailing, 4)
                 .padding(.bottom, -10)
+            if yourTurn {
+                SpeechBubble(text: "Your turn!")
+                    .padding(.trailing, 90)
+                    .padding(.bottom, 40)
+                    .transition(.scale.combined(with: .opacity))
+            }
         }
         // After a page the scene steps back so the result has room.
         .frame(height: finished ? 100 : (hSize == .compact ? 170 : 200))
@@ -182,6 +195,10 @@ struct ReadScreen: View {
                         Text("Tap a word to hear Pip help with it.")
                             .font(.pip(13, .semibold)).foregroundStyle(.white.opacity(0.7))
                     }
+                    if !echoPages.isEmpty, !thinking {
+                        Text("Pip read first on \(echoPages.count) \(echoPages.count == 1 ? "page" : "pages")")
+                            .font(.pip(14, .semibold)).foregroundStyle(.white.opacity(0.8))
+                    }
                     if !helpedWords.isEmpty, !thinking {
                         Text("Pip helped with: " + helpedWords.joined(separator: ", "))
                             .font(.pip(14, .semibold)).foregroundStyle(Palette.sun)
@@ -209,8 +226,16 @@ struct ReadScreen: View {
             }
         } else {
             VStack(spacing: 8) {
-                MicButton(state: isListening ? .listening : .idle,
-                          label: isListening ? "Tap when you're done" : "Tap and read to Pip", size: 92) { toggle() }
+                if !isListening {
+                    BigButton("Hear Pip read it first", variant: .secondary, systemImage: "ear.fill") { echoRead() }
+                        .disabled(echoIndex != nil)
+                        .opacity(echoIndex != nil ? 0.5 : 1)
+                }
+                MicButton(state: isListening ? .listening : (echoIndex != nil ? .disabled : .idle),
+                          label: isListening ? "Tap when you're done" : (echoIndex != nil ? "Pip is reading" : "Tap and read to Pip"),
+                          size: 92) {
+                    if echoIndex == nil { toggle() }
+                }
                 if isListening {
                     MicLevelMeter().frame(width: 160)
                 }
@@ -219,6 +244,22 @@ struct ReadScreen: View {
     }
 
     // MARK: Actions
+
+    /// Pip models the page in his expressive voice, lighting each word as he says it.
+    /// Purely visual: nothing here touches the session or the child's score.
+    private func echoRead() {
+        guard let page, echoIndex == nil, !isListening else { return }
+        let pageIndex = index
+        echoIndex = -1
+        Task {
+            await PipPlayer.shared.speak(.expressive(page.text)) { i in echoIndex = i }
+            echoIndex = nil
+            echoPages.insert(pageIndex)
+            withAnimation(.spring(duration: 0.3)) { yourTurn = true }
+            try? await Task.sleep(for: .seconds(1.8))
+            withAnimation { yourTurn = false }
+        }
+    }
 
     private func toggle() {
         if isListening {
