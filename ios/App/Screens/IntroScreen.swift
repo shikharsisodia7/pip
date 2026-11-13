@@ -98,7 +98,7 @@ struct TabPage<Content: View>: View {
 struct HomeTabView: View {
     @Environment(Session.self) private var session
     @Binding var tab: HomeTab
-    @State private var showPractice = false
+    @State private var showPractice = UserDefaults.standard.string(forKey: "PipSheet") == "practice"
     private var library: Library { .shared }
 
     var body: some View {
@@ -189,7 +189,7 @@ struct HomeTabView: View {
 
 struct LibraryTabView: View {
     @Environment(Session.self) private var session
-    @State private var adding = false
+    @State private var adding = UserDefaults.standard.string(forKey: "PipSheet") == "add"
     private var library: Library { .shared }
 
     var body: some View {
