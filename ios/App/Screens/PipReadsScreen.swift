@@ -252,10 +252,23 @@ struct PipReadsScreen: View {
             return p
         }
         let patterns = session.diagnosis?.patterns ?? []
-        if let p = try? await API.current.pipMistakes(pageIndex: page.index, pageText: page.text, patterns: patterns) {
-            return p
+        let plan = (try? await API.current.pipMistakes(pageIndex: page.index, pageText: page.text, patterns: patterns))
+            ?? (try? API.fixture("pip-mistakes"))
+        return plan.map(oneSlip)
+    }
+
+    /// Pip slips on one word per page. The server may plan two, so keep only the
+    /// first and read every other sentence as written.
+    private func oneSlip(_ plan: PipPlan) -> PipPlan {
+        guard let first = plan.mistakes.first else { return plan }
+        var p = plan
+        p.mistakes = [first]
+        p.sentences = p.sentences.map { s in
+            var s = s
+            if s.index != first.sentenceIndex { s.spokenText = s.text }
+            return s
         }
-        return try? API.fixture("pip-mistakes")
+        return p
     }
 
     private func run() async {

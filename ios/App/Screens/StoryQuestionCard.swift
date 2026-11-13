@@ -54,6 +54,14 @@ struct StoryQuestionCard: View {
         }
         .overlay { if confetti > 0 { Celebration().id(confetti) } }
         .task { await ask() }
+        // Debug panel answers arrive while a sheet is open, so poll for them
+        // instead of relying only on a change notification.
+        .task(id: phase == .ready) {
+            while !Task.isCancelled, phase == .ready {
+                if log.injectedAnswer != nil { await judge(transcript: ""); break }
+                try? await Task.sleep(for: .milliseconds(250))
+            }
+        }
         .onChange(of: log.injectedAnswer) { _, answer in
             guard answer != nil else { return }
             if phase == .listening { stopRequested = true }
