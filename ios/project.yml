@@ -31,12 +31,14 @@ targets:
         UILaunchScreen: {}
         UIRequiresFullScreen: true
         UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         NSMicrophoneUsageDescription: Pip listens while you read aloud.
-        NSSpeechRecognitionUsageDescription: Pip can use on-device speech recognition when the network is unavailable.
+        NSCameraUsageDescription: Snap a page of any book so you can read it to Pip.
+        NSSpeechRecognitionUsageDescription: Pip turns your reading into words so it can light up each word you read.
         NSLocalNetworkUsageDescription: Pip talks to the reading server on this network.
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true

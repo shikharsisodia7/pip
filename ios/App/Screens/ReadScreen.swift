@@ -1,105 +1,260 @@
-// First working version of the Read screen: the child reads page 0 aloud and
-// every word lights up by how it went. The full screen (diagnosis, result card)
-// builds on this.
+// The child reads the book aloud, page by page. Every word lights up by how it
+// went: green when read, warm yellow after a long pause, coral when skipped or
+// misread. After each page Pip notices which sound was tricky, and when the
+// child is ready, Pip takes a turn reading.
 
 import SwiftUI
 import PipKit
 
 struct ReadScreen: View {
     @Environment(Session.self) private var session
+    @Environment(\.horizontalSizeClass) private var hSize
     @State private var listener: (any Listening)?
+    @State private var prosody = ProsodyRecorder()
     @State private var finalMarks: [WordMark] = []
     @State private var finished = false
+    @State private var thinking = false
+    @State private var message: String?
+    @State private var error: String?
 
+    private var book: Book { session.book }
+    private var index: Int { session.readPageIndex }
     private var page: BookPage? { session.readPage }
+    private var isLast: Bool { index >= book.pages.count - 1 }
 
     private var isListening: Bool {
         guard let l = listener else { return false }
         return l.status == .listening || l.status == .connecting
     }
 
-    private var currentMarks: [WordMark] {
+    private var marks: [WordMark] {
         guard let page else { return [] }
         if let l = listener, isListening {
             return liveMarks(expectedText: page.text, transcript: l.liveTranscript)
+        }
+        if finalMarks.isEmpty, let done = session.pagesRead[index] {
+            return PipKit.marks(for: done.alignment)
         }
         return finalMarks
     }
 
     var body: some View {
-        if let page {
-            HStack(spacing: 24) {
-                scene(page)
-                VStack(alignment: .leading, spacing: 16) {
-                    VStack(alignment: .leading, spacing: 14) {
-                        ReadingText(text: page.text, marks: currentMarks, fontSize: 30)
-                        ReadingLegend()
-                        StoryCredit(book: session.book, onPaper: true)
+        VStack(spacing: 14) {
+            topBar
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 16) {
+                    if let page {
+                        sceneCard(page)
+                        storyCard(page)
                     }
-                    .padding(24)
-                    .background(Palette.paper, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+                    if let error {
+                        Text(error).font(.pip(15, .semibold)).foregroundStyle(Palette.sun).multilineTextAlignment(.center)
+                    }
+                    if finished { resultCard }
+                }
+                .padding(.bottom, 12)
+            }
+            controls
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+        .padding(.bottom, 10)
+        .frame(maxWidth: 640)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear(perform: registerDebug)
+        .onChange(of: index) { resetPage() }
+    }
 
-                    HStack(spacing: 20) {
-                        MicButton(state: isListening ? .listening : .idle,
-                                  label: isListening ? "Tap when you're done" : "Tap and read to Pip",
-                                  size: 90) { toggle() }
-                        if isListening {
-                            Meter(value: Double(MicHub.shared.level), tone: .accent, height: 10).frame(width: 140)
-                        }
-                        Spacer()
-                        if finished {
-                            BigButton("Let Pip try", systemImage: "arrow.right") { session.advance() }
+    // MARK: Pieces
+
+    private var topBar: some View {
+        HStack(spacing: 12) {
+            OrbButton(systemImage: "xmark", colors: Palette.blueOrb, size: 44) {
+                Task { await stopListening(save: false) }
+                session.reset()
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                Text(book.title).font(.pip(15, .bold)).foregroundStyle(.white).lineLimit(1)
+                TrackBar(value: Double(index + 1) / Double(max(1, book.pages.count)))
+            }
+            Text("\(index + 1)/\(book.pages.count)")
+                .font(.pip(15, .bold))
+                .foregroundStyle(Palette.textSoft)
+                .monospacedDigit()
+            Label("\(session.rewards.stars)", systemImage: "star.fill")
+                .font(.pip(15, .bold))
+                .foregroundStyle(Palette.sun)
+                .padding(.horizontal, 12).padding(.vertical, 8)
+                .background(Capsule().fill(Palette.glass))
+                .contentTransition(.numericText())
+        }
+    }
+
+    private func sceneCard(_ page: BookPage) -> some View {
+        ZStack(alignment: .bottomTrailing) {
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(Color(hexString: page.scene.bg) ?? Palette.paper)
+                .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).strokeBorder(.white.opacity(0.4), lineWidth: 2))
+            Text(page.scene.emoji)
+                .font(.system(size: hSize == .compact ? 64 : 80))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            PipView(state: pipState, size: 86)
+                .padding(.trailing, 4)
+                .padding(.bottom, -10)
+        }
+        .frame(height: hSize == .compact ? 170 : 200)
+        .shadow(color: .black.opacity(0.25), radius: 14, y: 8)
+    }
+
+    private var pipState: PipState {
+        if thinking { return .thinking }
+        if isListening { return .listening }
+        if finished { return .celebrating }
+        return .idle
+    }
+
+    private func storyCard(_ page: BookPage) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ReadingText(text: page.text, marks: marks, fontSize: hSize == .compact ? 27 : 32)
+            ReadingLegend()
+            if !book.isUserBook { StoryCredit(book: book, onPaper: true) }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 28, style: .continuous).fill(Palette.paper))
+        .shadow(color: .black.opacity(0.25), radius: 14, y: 8)
+    }
+
+    private var resultCard: some View {
+        let result = session.pagesRead[index]
+        return GlassCard(colors: Palette.grapeCard, radius: 26, padding: 18) {
+            HStack(alignment: .top, spacing: 14) {
+                Orb(systemImage: thinking ? "ellipsis" : "sparkles", colors: Palette.orangeOrb, size: 46)
+                VStack(alignment: .leading, spacing: 6) {
+                    if let r = result {
+                        Text("You read \(r.metrics.wordsCorrect) of \(r.metrics.wordsTotal) words!")
+                            .font(.pip(19, .bold)).foregroundStyle(.white)
+                    }
+                    Text(thinking ? "Pip is thinking about your reading…" : (message ?? "Great reading!"))
+                        .font(.pip(16, .semibold))
+                        .foregroundStyle(.white.opacity(0.85))
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let p = session.diagnosis?.patterns.first, !p.evidenceWords.isEmpty, !thinking {
+                        HStack(spacing: 8) {
+                            ForEach(p.evidenceWords.prefix(3), id: \.self) { w in
+                                Text(w).font(.pip(15, .bold)).foregroundStyle(Palette.ink)
+                                    .padding(.horizontal, 10).padding(.vertical, 4)
+                                    .background(Capsule().fill(WordMark.missed.fill))
+                            }
                         }
                     }
                 }
             }
-            .padding(.horizontal, 28)
-            .padding(.vertical, 20)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .onAppear(perform: registerDebug)
+        }
+        .transition(.scale(scale: 0.9).combined(with: .opacity))
+    }
+
+    @ViewBuilder private var controls: some View {
+        if finished {
+            HStack(spacing: 12) {
+                BigButton("Again", variant: .secondary, systemImage: "arrow.counterclockwise") { resetPage() }
+                if isLast {
+                    BigButton("Pip's turn!", systemImage: "arrow.right") { session.startPipsTurn() }
+                } else {
+                    BigButton("Next page", systemImage: "arrow.right") { session.readPageIndex += 1 }
+                }
+            }
+            if !isLast {
+                Button("I'm done, Pip's turn!") { session.startPipsTurn() }
+                    .font(.pip(16, .bold))
+                    .foregroundStyle(Palette.accent)
+            }
+        } else {
+            VStack(spacing: 8) {
+                MicButton(state: isListening ? .listening : .idle,
+                          label: isListening ? "Tap when you're done" : "Tap and read to Pip", size: 92) { toggle() }
+                if isListening {
+                    Meter(value: Double(MicHub.shared.level), tone: .accent, height: 8).frame(width: 160)
+                }
+            }
         }
     }
 
-    private func scene(_ page: BookPage) -> some View {
-        ZStack(alignment: .bottomLeading) {
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color(hexString: page.scene.bg) ?? Palette.surface)
-            Text(page.scene.emoji)
-                .font(.system(size: 90))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            PipView(state: isListening ? .listening : (finished ? .celebrating : .idle), size: 80)
-                .padding(8)
-        }
-        .frame(width: 260)
-    }
+    // MARK: Actions
 
     private func toggle() {
-        if let l = listener, isListening {
-            Task { finish(await l.stop()) }
+        if isListening {
+            Task { await stopListening(save: true) }
         } else {
+            error = nil
             let l = Listeners.make()
             listener = l
-            finished = false
             finalMarks = []
-            Task { await l.start() }
+            Task {
+                await l.start()
+                if l.status == .error {
+                    error = l.errorMessage ?? "Pip could not hear you. Try again?"
+                    listener = nil
+                    return
+                }
+                prosody.start()
+            }
         }
     }
 
-    private func finish(_ transcript: Transcript) {
+    private func stopListening(save: Bool) async {
+        guard let l = listener else { return }
+        let stats = prosody.stop()
+        let transcript = await l.stop()
+        listener = nil
+        guard save else { return }
+        guard !transcript.words.isEmpty else {
+            error = "Pip didn't hear any words. Try reading a little louder?"
+            return
+        }
+        finish(transcript, prosody: stats)
+    }
+
+    private func finish(_ transcript: Transcript, prosody stats: ProsodyStats?) {
         guard let page else { return }
         let alignment = alignWords(expectedText: page.text, transcript: transcript)
         let metrics = computeMetrics(alignment)
-        session.read = ReadResult(transcript: transcript, alignment: alignment, metrics: metrics)
-        finalMarks = marks(for: alignment)
-        listener = nil
-        finished = true
+        let result = ReadResult(transcript: transcript, alignment: alignment, metrics: metrics)
+        session.read = result
+        session.pagesRead[index] = result
+        if let stats, stats.voicedFrames > 0 { session.baselineProsody = stats }
+        Library.shared.markRead(book.id, page: index)
+        finalMarks = PipKit.marks(for: alignment)
+        withAnimation(.spring) { finished = true }
         session.award(.pageRead(correctWords: metrics.wordsCorrect))
+
+        thinking = true
+        message = nil
+        Task {
+            let d = (try? await API.current.diagnose(pageText: page.text, alignment: alignment, metrics: metrics))
+                ?? localDiagnosis(pageText: page.text, alignment: alignment)
+            session.diagnosis = d
+            message = d.kidMessage
+            thinking = false
+        }
+    }
+
+    private func resetPage() {
+        finished = false
+        finalMarks = []
+        message = nil
+        error = nil
+        thinking = false
     }
 
     private func registerDebug() {
-        session.registerDebugAction("Fill Read with demo transcript") {
-            let t: Transcript = (try? API.fixture("page1-demo")) ?? .empty
-            finish(t)
+        session.registerDebugAction("Read this page with a sample reading") {
+            guard let page else { return }
+            let words = tokenizeDisplay(page.text).enumerated().compactMap { i, t -> TimedWord? in
+                if i == 3 { return nil }
+                return TimedWord(text: i == 6 ? "ball" : t.norm, start: Double(i) * 0.45 + (i > 9 ? 1.5 : 0), end: Double(i) * 0.45 + 0.35 + (i > 9 ? 1.5 : 0))
+            }
+            finish(Transcript(text: words.map(\.text).joined(separator: " "), words: words), prosody: nil)
         }
     }
 }
