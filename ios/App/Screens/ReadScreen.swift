@@ -16,6 +16,11 @@ struct ReadScreen: View {
     @State private var thinking = false
     @State private var message: String?
     @State private var error: String?
+    // Live help: when the child stalls on a word, Pip shows it in parts.
+    @State private var stall = StallDetector()
+    @State private var activeHint: ActiveHint?
+    @State private var helpedWords: [String] = []
+    @State private var watchTask: Task<Void, Never>?
 
     private var book: Book { session.book }
     private var index: Int { session.readPageIndex }
@@ -46,6 +51,10 @@ struct ReadScreen: View {
                     VStack(spacing: 16) {
                         if let page {
                             sceneCard(page)
+                            if let activeHint {
+                                hintCard(activeHint)
+                                    .transition(.scale(scale: 0.92).combined(with: .opacity))
+                            }
                             storyCard(page)
                         }
                         if let error {
@@ -121,6 +130,7 @@ struct ReadScreen: View {
     }
 
     private var pipState: PipState {
+        if PipPlayer.shared.isSpeaking || activeHint != nil { return .speaking }
         if thinking { return .thinking }
         if isListening { return .listening }
         if finished { return .celebrating }
@@ -156,11 +166,21 @@ struct ReadScreen: View {
                     if let p = session.diagnosis?.patterns.first, !p.evidenceWords.isEmpty, !thinking {
                         HStack(spacing: 8) {
                             ForEach(p.evidenceWords.prefix(3), id: \.self) { w in
-                                Text(w).font(.pip(15, .bold)).foregroundStyle(Palette.ink)
-                                    .padding(.horizontal, 10).padding(.vertical, 4)
-                                    .background(Capsule().fill(WordMark.missed.fill))
+                                Button { sayWord(w) } label: {
+                                    Label(w, systemImage: "speaker.wave.2.fill")
+                                        .font(.pip(15, .bold)).foregroundStyle(Palette.ink)
+                                        .padding(.horizontal, 10).padding(.vertical, 4)
+                                        .background(Capsule().fill(WordMark.missed.fill))
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
+                        Text("Tap a word to hear Pip help with it.")
+                            .font(.pip(13, .semibold)).foregroundStyle(.white.opacity(0.7))
+                    }
+                    if !helpedWords.isEmpty, !thinking {
+                        Text("Pip helped with: " + helpedWords.joined(separator: ", "))
+                            .font(.pip(14, .semibold)).foregroundStyle(Palette.sun)
                     }
                 }
             }
@@ -212,6 +232,7 @@ struct ReadScreen: View {
                     return
                 }
                 prosody.start()
+                startStallWatch(l)
                 // A blocked microphone delivers exact zeros. Say so instead of
                 // letting the child read to a Pip who cannot hear.
                 try? await Task.sleep(for: .seconds(3))
@@ -224,6 +245,9 @@ struct ReadScreen: View {
 
     private func stopListening(save: Bool) async {
         guard let l = listener else { return }
+        watchTask?.cancel()
+        watchTask = nil
+        withAnimation(.spring(duration: 0.35)) { activeHint = nil }
         let stats = prosody.stop()
         let transcript = await l.stop()
         listener = nil
@@ -260,6 +284,11 @@ struct ReadScreen: View {
     }
 
     private func resetPage() {
+        watchTask?.cancel()
+        watchTask = nil
+        activeHint = nil
+        helpedWords = []
+        stall.reset()
         finished = false
         finalMarks = []
         message = nil
@@ -269,12 +298,82 @@ struct ReadScreen: View {
 
     private func registerDebug() {
         session.registerDebugAction("Read this page with a sample reading") { sampleReading() }
+        session.registerDebugAction("Show Pip's help for the next word") {
+            showHint(at: marks.firstIndex(of: .current) ?? 0)
+        }
+    }
+
+    // MARK: Live help
+
+    /// Polls the listener while the child reads. When nothing new is heard for
+    /// a few seconds, Pip shows the next word in parts. New speech hides it.
+    private func startStallWatch(_ l: any Listening) {
+        watchTask?.cancel()
+        let started = Date()
+        watchTask = Task {
+            while !Task.isCancelled, listener === l, isListening {
+                let heard = l.liveTranscript.words.count
+                let signature = "\(heard)|\(l.partialText)"
+                let changed = signature != stall.lastSignature
+                let current = marks.firstIndex(of: .current)
+                let now = Date().timeIntervalSince(started)
+                if let index = stall.update(signature: signature, wordsHeard: heard, currentIndex: current, now: now) {
+                    showHint(at: index)
+                } else if changed, activeHint != nil {
+                    withAnimation(.spring(duration: 0.35)) { activeHint = nil }
+                }
+                try? await Task.sleep(for: .milliseconds(250))
+            }
+        }
+    }
+
+    private func showHint(at index: Int) {
+        guard let page, let token = tokenizeDisplay(page.text)[safe: index] else { return }
+        let hint = stuckHint(for: token.norm)
+        if !helpedWords.contains(hint.word) { helpedWords.append(hint.word) }
+        withAnimation(.spring(duration: 0.4)) { activeHint = ActiveHint(index: index, hint: hint) }
+    }
+
+    /// After the page, Pip says a tricky word and the sound inside it. The mic is off by then.
+    private func sayWord(_ word: String) {
+        let hint = stuckHint(for: word)
+        Task { await PipPlayer.shared.speak(.expressive(hint.spoken), onWord: nil) }
+    }
+
+    private func hintCard(_ active: ActiveHint) -> some View {
+        GlassCard(colors: Palette.lagoonCard, radius: 26, padding: 16) {
+            HStack(alignment: .top, spacing: 14) {
+                Orb(systemImage: "lightbulb.fill", colors: Palette.orangeOrb, size: 44)
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Pip can help! Try it in parts:")
+                        .font(.pip(15, .bold)).foregroundStyle(.white.opacity(0.85))
+                    HStack(spacing: 6) {
+                        ForEach(Array(active.hint.chunks.enumerated()), id: \.offset) { item in
+                            Text(item.element)
+                                .font(.pip(26, .bold))
+                                .foregroundStyle(Palette.ink)
+                                .padding(.horizontal, 10).padding(.vertical, 4)
+                                .background(Capsule().fill(item.offset == active.hint.trickyIndex ? Palette.sun : Palette.paper))
+                        }
+                    }
+                    Text(active.hint.title)
+                        .font(.pip(15, .semibold)).foregroundStyle(.white.opacity(0.85))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
     }
 
     private func sampleReading() {
         guard let page else { return }
         finish(SampleReading.transcript(for: page.text), prosody: nil)
     }
+}
+
+/// The word Pip is helping with right now, and how to show it.
+struct ActiveHint: Equatable {
+    let index: Int
+    let hint: StuckHint
 }
 
 /// A made-up reading with one skipped word, one misread word and one long
