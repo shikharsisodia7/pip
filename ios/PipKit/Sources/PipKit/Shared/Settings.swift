@@ -39,7 +39,8 @@ public final class Settings {
     public var demoPath: DemoPath { didSet { UserDefaults.standard.set(demoPath.rawValue, forKey: Key.demoPath) } }
     /// Expression pass threshold, tuned in the room from the debug panel.
     public var expressionThreshold: Double { didSet { UserDefaults.standard.set(expressionThreshold, forKey: Key.threshold) } }
-    /// Which live listener to use when not in mock mode.
+    /// Which live listener to use when not in mock mode. Scribe falls back to
+    /// Apple's recognizer when the server is unreachable.
     public var listenerKind: ListenerKind { didSet { UserDefaults.standard.set(listenerKind.rawValue, forKey: Key.listener) } }
 
     public init() {
@@ -50,6 +51,6 @@ public final class Settings {
         mock = d.object(forKey: Key.mock) == nil ? false : d.bool(forKey: Key.mock)
         demoPath = d.string(forKey: Key.demoPath).flatMap(DemoPath.init(rawValue:)) ?? .twoMin
         expressionThreshold = d.object(forKey: Key.threshold) == nil ? 1.25 : d.double(forKey: Key.threshold)
-        listenerKind = d.string(forKey: Key.listener).flatMap(ListenerKind.init(rawValue:)) ?? .apple
+        listenerKind = d.string(forKey: Key.listener).flatMap(ListenerKind.init(rawValue:)) ?? .scribe
     }
 }

@@ -41,7 +41,9 @@ final class AppleListener: Listening {
         req.shouldReportPartialResults = true
         req.taskHint = .dictation
         req.addsPunctuation = false
-        if recognizer.supportsOnDeviceRecognition { req.requiresOnDeviceRecognition = true }
+        // Server recognition when available: it is more accurate for children's
+        // voices, and on-device models are not always installed.
+        req.requiresOnDeviceRecognition = false
         request = req
 
         task = recognizer.recognitionTask(with: req) { [weak self] result, error in
