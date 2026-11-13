@@ -34,6 +34,19 @@ Other scripts:
 - `npm run check`: type check, unit tests, and a scan that keeps secrets and audio out of the repository.
 - `npm run warm`: pre-generates the cached Claude and speech responses for the demo path (needs real keys).
 
+### iPhone app
+
+The native app in `ios/` is a SwiftUI client for the same server. It needs Xcode 26 or newer and [XcodeGen](https://github.com/yonaskolb/XcodeGen).
+
+```bash
+brew install xcodegen
+cd ios && xcodegen          # generates Pip.xcodeproj (not committed)
+open Pip.xcodeproj          # run the Pip scheme on an iPhone simulator
+cd PipKit && swift test     # shared logic tests, no simulator needed
+```
+
+The app starts in mock mode with bundled fixtures, so it runs with no server. To use the live server, start `npm run dev`, then turn mock off and set the server address in the hidden debug panel (long press the top left corner). To run on a physical iPhone, put `DEVELOPMENT_TEAM = <your team id>` in `ios/Local.xcconfig`, which is never committed.
+
 ## Credits and licenses
 
 - Story text and illustrations: an openly licensed picture book from [Pratham Books StoryWeaver](https://storyweaver.org.in), used under CC BY 4.0. Full attribution is shown on every reading screen.

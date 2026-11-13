@@ -52,3 +52,13 @@ __pycache__/
 
 # local dev tooling (kept out of the public repo)
 .superset/
+
+# iOS: generated project, local signing, build output, generated Info.plist
+ios/*.xcodeproj/
+ios/Local.xcconfig
+ios/build/
+ios/App/Info.plist
+DerivedData/
+.build/
+.swiftpm/
+xcuserdata/
