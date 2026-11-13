@@ -41,7 +41,10 @@ struct RootView: View {
             // Screenshot and QA helper: launch with `-PipOpen read|report|pip|expression`.
             switch UserDefaults.standard.string(forKey: "PipOpen") {
             case "read": session.startReading(Library.shared.books[1])
-            case "report": session.startReading(Library.shared.books[1]); session.goto(.report)
+            case "report":
+                session.startReading(Library.shared.books[1])
+                if UserDefaults.standard.bool(forKey: "PipSampleRead") { SampleReading.fill(session, page: 0) }
+                session.goto(.report)
             case "pip": session.startReading(Library.shared.books[1]); session.goto(.pipReads)
             case "expression": session.startReading(Library.shared.books[1]); session.goto(.expression)
             default: break
