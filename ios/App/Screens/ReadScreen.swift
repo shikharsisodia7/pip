@@ -61,7 +61,12 @@ struct ReadScreen: View {
         .padding(.bottom, 10)
         .frame(maxWidth: 640)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear(perform: registerDebug)
+        .onAppear {
+            registerDebug()
+            #if DEBUG
+            if UserDefaults.standard.bool(forKey: "PipAutoListen") { toggle() }
+            #endif
+        }
         .onChange(of: index) { resetPage() }
     }
 
@@ -198,6 +203,12 @@ struct ReadScreen: View {
                     return
                 }
                 prosody.start()
+                // A blocked microphone delivers exact zeros. Say so instead of
+                // letting the child read to a Pip who cannot hear.
+                try? await Task.sleep(for: .seconds(3))
+                if listener === l, isListening, !MicHub.shared.heardSound {
+                    error = "Pip can't hear the microphone. Check that the mic is turned on."
+                }
             }
         }
     }

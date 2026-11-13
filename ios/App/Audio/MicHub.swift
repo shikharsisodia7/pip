@@ -20,6 +20,14 @@ final class MicHub {
 
     func start() throws {
         if isRunning { return }
+        #if DEBUG
+        // Test hook: `-PipMicFile /path/to/reading.wav` plays a recording into the
+        // listeners in real time instead of the microphone.
+        if let path = UserDefaults.standard.string(forKey: "PipMicFile"), FileManager.default.fileExists(atPath: path) {
+            try startFile(path)
+            return
+        }
+        #endif
         let input = engine.inputNode
         let format = input.outputFormat(forBus: 0)
         guard format.sampleRate > 0, format.channelCount > 0 else { throw MicError.noInput }
@@ -31,15 +39,53 @@ final class MicHub {
         engine.prepare()
         try engine.start()
         isRunning = true
+        heardSound = false
     }
 
     func stop() {
         guard isRunning else { return }
+        #if DEBUG
+        filePlayback?.cancel()
+        filePlayback = nil
+        #endif
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
         isRunning = false
         level = 0
     }
+
+    #if DEBUG
+    @ObservationIgnored private var filePlayback: Task<Void, Never>?
+
+    private func startFile(_ path: String) throws {
+        let file = try AVAudioFile(forReading: URL(fileURLWithPath: path))
+        let format = file.processingFormat
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(file.length)) else { throw MicError.noInput }
+        try file.read(into: buffer)
+        guard let ch = buffer.floatChannelData?[0] else { throw MicError.noInput }
+        let samples = Array(UnsafeBufferPointer(start: ch, count: Int(buffer.frameLength)))
+        let rate = format.sampleRate
+        let store = self.store
+        isRunning = true
+        heardSound = false
+        filePlayback = Task.detached { [weak self] in
+            let chunk = 1024
+            var i = 0
+            let t0 = Date()
+            while i < samples.count, !Task.isCancelled {
+                let part = Array(samples[i..<min(i + chunk, samples.count)])
+                var sum: Float = 0
+                for v in part { sum += v * v }
+                let rms = (sum / Float(max(1, part.count))).squareRoot()
+                for h in store.handlers() { h(part, rate) }
+                await MainActor.run { self?.updateLevel(rms) }
+                i += chunk
+                let due = Double(i) / rate - Date().timeIntervalSince(t0)
+                if due > 0 { try? await Task.sleep(for: .seconds(due)) }
+            }
+        }
+    }
+    #endif
 
     func addListener(_ id: String, _ handler: @escaping @Sendable (_ samples: [Float], _ sampleRate: Double) -> Void) {
         store.set(id, handler)
@@ -49,7 +95,12 @@ final class MicHub {
         store.remove(id)
     }
 
+    /// False while the input has been pure digital silence since `start()`, which
+    /// means the microphone is blocked (for example a Simulator without Mac mic access).
+    @ObservationIgnored private(set) var heardSound = false
+
     private func updateLevel(_ rms: Float) {
+        if rms > 0 { heardSound = true }
         let target = min(1, rms * 8)
         level = level * 0.6 + target * 0.4
     }
