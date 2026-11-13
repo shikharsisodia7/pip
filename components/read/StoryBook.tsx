@@ -7,6 +7,7 @@
 
 import clsx from 'clsx';
 import { motion, useReducedMotion } from 'framer-motion';
+import { useSyncExternalStore } from 'react';
 import type { Token } from '@/lib/text';
 import type { BookPage } from '@/lib/types';
 
@@ -38,8 +39,64 @@ const PAGE_EDGES = [
 /** Long pages step down to 36px so the spread never overflows. */
 const LONG_PAGE_WORDS = 22;
 
+// "Easy read": wider letter and word spacing for readers who find dense text hard.
+// Stored per browser; an in-memory value keeps the toggle working without storage.
+const EASY_READ_KEY = 'pip-easy-read';
+const easyReadListeners = new Set<() => void>();
+let easyReadMemory = false;
+
+function readEasyRead(): boolean {
+  try {
+    const v = window.localStorage.getItem(EASY_READ_KEY);
+    if (v !== null) return v === '1';
+  } catch {
+    // storage unavailable; fall back to memory
+  }
+  return easyReadMemory;
+}
+
+function writeEasyRead(on: boolean): void {
+  easyReadMemory = on;
+  try {
+    window.localStorage.setItem(EASY_READ_KEY, on ? '1' : '0');
+  } catch {
+    // storage unavailable; memory still holds the choice
+  }
+  easyReadListeners.forEach((l) => l());
+}
+
+function subscribeEasyRead(listener: () => void): () => void {
+  easyReadListeners.add(listener);
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === EASY_READ_KEY) listener();
+  };
+  window.addEventListener('storage', onStorage);
+  return () => {
+    easyReadListeners.delete(listener);
+    window.removeEventListener('storage', onStorage);
+  };
+}
+
+function useEasyRead(): boolean {
+  return useSyncExternalStore(subscribeEasyRead, readEasyRead, () => false);
+}
+
+function storyTextStyle(easy: boolean, long: boolean): React.CSSProperties | undefined {
+  if (easy) {
+    return {
+      letterSpacing: '0.09em',
+      wordSpacing: '0.3em',
+      lineHeight: 1.95,
+      fontWeight: 700,
+      ...(long ? { fontSize: '2rem' } : {}),
+    };
+  }
+  return long ? { fontSize: '2.25rem', lineHeight: 1.55 } : undefined;
+}
+
 export function StoryBook({ page, words, readCount, currentIndex, underlined, settled = false, className }: StoryBookProps) {
   const reduceMotion = useReducedMotion() ?? false;
+  const easyRead = useEasyRead();
   const underlineOrder = underlined ? [...underlined].sort((a, b) => a - b) : [];
   return (
     // Hardcover board peeking out around the pages.
@@ -53,9 +110,20 @@ export function StoryBook({ page, words, readCount, currentIndex, underlined, se
         <div className="relative flex items-center px-8 py-10 sm:px-12 md:min-h-[420px] md:px-14 md:py-14">
           {/* the spine, falling into shadow toward the gutter */}
           <div aria-hidden className="pointer-events-none absolute inset-y-0 left-0 hidden w-16 bg-linear-to-r from-ink/[0.07] to-transparent md:block" />
+          <button
+            type="button"
+            aria-pressed={easyRead}
+            onClick={() => writeEasyRead(!easyRead)}
+            className={clsx(
+              'absolute right-3 top-3 z-10 rounded-full border-2 px-4 py-1.5 font-sans text-base font-bold transition-colors',
+              easyRead ? 'border-accent bg-accent-soft text-accent-deep' : 'border-line bg-paper text-ink-soft hover:text-ink',
+            )}
+          >
+            <span aria-hidden className="mr-1 font-story">Aa</span> Easy read
+          </button>
           <p
             className="story-text relative text-pretty text-ink"
-            style={words.length > LONG_PAGE_WORDS ? { fontSize: '2.25rem', lineHeight: 1.55 } : undefined}
+            style={storyTextStyle(easyRead, words.length > LONG_PAGE_WORDS)}
           >
             {words.map((w, i) => (
               <span key={i}>

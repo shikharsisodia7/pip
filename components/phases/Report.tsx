@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import Owl from '@/components/pip/Owl';
 import { EvalFooter } from '@/components/report/EvalFooter';
+import { NextSessionTile, TrustTile, practiceWords } from '@/components/report/NextSteps';
 import { expressionView, mistakesView, patternsView, probeView, readingView, topPattern } from '@/components/report/derive';
 import { SampleBadge } from '@/components/report/parts';
 import { buildSampleReport, isSample } from '@/components/report/sample';
@@ -145,6 +146,15 @@ export default function Report() {
           <p className="mt-2 text-lg text-ink-soft">This report fills in after a reading session with Pip.</p>
         </Card>
       )}
+
+      <div className="mt-6 overflow-hidden rounded-card border border-line bg-line shadow-soft">
+        <div className="grid gap-px md:grid-cols-2">
+          {hasContent && views.top && (
+            <NextSessionTile pattern={views.top} words={practiceWords(views.top.id, [probePre, probePost])} />
+          )}
+          <TrustTile className={clsx(!(hasContent && views.top) && 'md:col-span-2')} />
+        </div>
+      </div>
 
       <footer className="mt-8 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
         <EvalFooter />
