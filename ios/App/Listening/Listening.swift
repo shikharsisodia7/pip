@@ -26,7 +26,8 @@ enum Listeners {
     @MainActor static func make() -> any Listening {
         if Settings.shared.mock { return MockListener() }
         switch Settings.shared.listenerKind {
-        case .scribe, .apple: return AppleListener()
+        case .scribe: return ScribeListener()
+        case .apple: return AppleListener()
         }
     }
 }
