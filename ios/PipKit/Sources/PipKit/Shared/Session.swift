@@ -38,6 +38,8 @@ public final class Session {
     public var read: ReadResult?
     /// Every page read this session, by page index.
     public var pagesRead: [Int: ReadResult] = [:]
+    /// Stars the child had when this reading session began.
+    public private(set) var startStars = 0
     public var diagnosis: DiagnoseResponse?
     public var baselineProsody: ProsodyStats?
     public var pipPlan: PipPlan?
@@ -71,6 +73,7 @@ public final class Session {
     public func startReading(_ book: Book, page: Int = 0) {
         clearSession()
         self.book = book
+        startStars = rewards.stars
         readPageIndex = max(0, min(page, book.pages.count - 1))
         pipPageIndex = min(readPageIndex + 1, book.pages.count - 1)
         phase = nextPhase(after: .intro, demoPath: demoPath)
@@ -85,8 +88,10 @@ public final class Session {
         advance()
     }
 
-    /// Back to the home screen. Keeps the book and the stars.
+    /// Back to the home screen. Keeps the book and the stars, and logs any
+    /// pages read, however the session ended.
     public func reset() {
+        if let s = summary() { ReadingLog.shared.add(s) }
         clearSession()
         phase = .intro
     }
