@@ -20,7 +20,7 @@ if echo "$tracked" | grep -E '(^|/)\.env' | grep -v '\.env\.example$' >/dev/null
   report "an env file other than .env.example is tracked"
 fi
 
-if echo "$tracked" | grep -E '^\.cache/' >/dev/null; then
+if echo "$tracked" | grep -E '^\.cache(/|$)' >/dev/null; then
   report ".cache/ is tracked"
 fi
 

@@ -33,7 +33,7 @@ yarn-error.log*
 
 # internal planning notes, local caches, agent logs
 docs/internal/
-.cache/
+.cache
 .claude/
 *.log
 
