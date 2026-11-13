@@ -1,0 +1,3 @@
+// Shared build settings. Personal settings (DEVELOPMENT_TEAM for a physical
+// device) go in ios/Local.xcconfig, which is never committed.
+#include? "../Local.xcconfig"
