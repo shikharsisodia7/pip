@@ -1,0 +1,18 @@
+{
+  "title": "Pip Finds a Mouse",
+  "pattern": {
+    "id": "ou",
+    "kidLabel": "the 'ou' sound",
+    "teacherLabel": "vowel team: ou",
+    "evidenceWords": [],
+    "confidence": 0
+  },
+  "sentences": [
+    "Pip the owl heard a loud sound.",
+    "A mouse was out on the ground.",
+    "The mouse could not find its house.",
+    "Pip and the mouse went south.",
+    "They found the house by a round rock.",
+    "The proud mouse gave Pip a loud shout."
+  ]
+}
