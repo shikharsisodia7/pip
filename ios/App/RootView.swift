@@ -32,6 +32,7 @@ struct RootView: View {
         .fontDesign(.rounded)
         .preferredColorScheme(.dark)
         .debugHotZone()
+        .listenTestAction()
         .task {
             let book = await (try? API.current.book()) ?? .placeholder
             Library.shared.setFeatured(book)
