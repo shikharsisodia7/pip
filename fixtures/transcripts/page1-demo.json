@@ -1,0 +1,21 @@
+{
+  "text": "Tara thought the night was too quiet. She look out at the bright moon and smiled.",
+  "words": [
+    { "text": "Tara", "start": 0.2, "end": 0.55 },
+    { "text": "thought", "start": 0.65, "end": 1.05 },
+    { "text": "the", "start": 1.1, "end": 1.2 },
+    { "text": "night", "start": 1.25, "end": 1.6 },
+    { "text": "was", "start": 1.65, "end": 1.85 },
+    { "text": "too", "start": 1.9, "end": 2.1 },
+    { "text": "quiet.", "start": 2.15, "end": 2.6 },
+    { "text": "She", "start": 3.0, "end": 3.2 },
+    { "text": "look", "start": 3.3, "end": 3.6 },
+    { "text": "out", "start": 3.65, "end": 3.85 },
+    { "text": "at", "start": 3.9, "end": 4.0 },
+    { "text": "the", "start": 4.05, "end": 4.15 },
+    { "text": "bright", "start": 4.2, "end": 4.55 },
+    { "text": "moon", "start": 4.6, "end": 4.95 },
+    { "text": "and", "start": 5.0, "end": 5.15 },
+    { "text": "smiled.", "start": 5.2, "end": 5.7 }
+  ]
+}
