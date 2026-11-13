@@ -1,0 +1,18 @@
+{
+  "title": "Pip Has Enough",
+  "pattern": {
+    "id": "ough",
+    "kidLabel": "the 'ough' sound",
+    "teacherLabel": "vowel team: ough",
+    "evidenceWords": [],
+    "confidence": 0
+  },
+  "sentences": [
+    "Pip the owl thought of a snack.",
+    "He brought a bag of nuts.",
+    "The path was rough and tough.",
+    "Pip got through the rough patch.",
+    "He brought enough nuts for a pal.",
+    "Pip thought they had enough to share."
+  ]
+}

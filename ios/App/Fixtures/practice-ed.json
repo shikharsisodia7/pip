@@ -1,0 +1,18 @@
+{
+  "title": "Pip Planted a Seed",
+  "pattern": {
+    "id": "ed",
+    "kidLabel": "words ending in '-ed'",
+    "teacherLabel": "inflectional ending: -ed",
+    "evidenceWords": [],
+    "confidence": 0
+  },
+  "sentences": [
+    "Pip the owl picked a spot.",
+    "He planted a seed and patted the mud.",
+    "Pip filled a cup and tipped it.",
+    "He waited and rested in the sun.",
+    "A green leaf popped up as Pip watched.",
+    "Pip clapped and danced with his pals."
+  ]
+}

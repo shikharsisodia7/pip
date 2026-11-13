@@ -1,0 +1,12 @@
+{
+  "patterns": [
+    {
+      "id": "ed",
+      "kidLabel": "words ending in '-ed'",
+      "teacherLabel": "inflectional ending: -ed",
+      "evidenceWords": ["looked"],
+      "confidence": 0.8
+    }
+  ],
+  "kidMessage": "Pip noticed the ending in 'looked'. Can you help Pip listen for it?"
+}

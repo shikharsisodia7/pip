@@ -1,0 +1,30 @@
+{
+  "text": "The elephant's name was Golu. He was as round as a drum. The little rabbit was named Chhotu. He looked like a ball of cotton.",
+  "words": [
+    { "text": "The", "start": 0.2, "end": 0.4 },
+    { "text": "elephant's", "start": 0.5, "end": 1.2 },
+    { "text": "name", "start": 1.3, "end": 1.65 },
+    { "text": "was", "start": 1.75, "end": 2.0 },
+    { "text": "Golu.", "start": 2.1, "end": 2.65 },
+    { "text": "He", "start": 3.0, "end": 3.2 },
+    { "text": "was", "start": 3.3, "end": 3.55 },
+    { "text": "as", "start": 3.65, "end": 3.85 },
+    { "text": "round", "start": 3.95, "end": 4.4 },
+    { "text": "as", "start": 4.5, "end": 4.7 },
+    { "text": "a", "start": 4.8, "end": 4.95 },
+    { "text": "drum.", "start": 5.05, "end": 5.5 },
+    { "text": "The", "start": 5.85, "end": 6.05 },
+    { "text": "little", "start": 6.15, "end": 6.5 },
+    { "text": "rabbit", "start": 6.6, "end": 7.1 },
+    { "text": "was", "start": 7.2, "end": 7.45 },
+    { "text": "named", "start": 7.55, "end": 8.0 },
+    { "text": "Chhotu.", "start": 8.1, "end": 8.75 },
+    { "text": "He", "start": 10.75, "end": 10.95 },
+    { "text": "looked", "start": 11.05, "end": 11.5 },
+    { "text": "like", "start": 11.6, "end": 11.95 },
+    { "text": "a", "start": 12.05, "end": 12.2 },
+    { "text": "ball", "start": 12.3, "end": 12.7 },
+    { "text": "of", "start": 12.8, "end": 13.0 },
+    { "text": "cotton.", "start": 13.1, "end": 13.65 }
+  ]
+}
