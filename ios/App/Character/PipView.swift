@@ -37,10 +37,12 @@ struct PipView: View {
     var body: some View {
         ZStack {
             if stage >= 2 {
+                // A radial gradient instead of a blur: same soft glow, no
+                // per-frame filter while Pip bobs.
                 Circle()
-                    .fill(colors[0].opacity(0.55))
-                    .frame(width: size * 1.1, height: size * 1.1)
-                    .blur(radius: size * 0.16)
+                    .fill(RadialGradient(colors: [colors[0].opacity(0.55), colors[0].opacity(0)],
+                                         center: .center, startRadius: size * 0.2, endRadius: size * 0.7))
+                    .frame(width: size * 1.4, height: size * 1.4)
             }
             horns
             feet
@@ -67,15 +69,15 @@ struct PipView: View {
         .animation(.easeInOut(duration: state == .celebrating ? 0.35 : 1.5).repeatForever(autoreverses: true), value: bob)
         .animation(.spring(response: 0.55, dampingFraction: 0.55), value: stage)
         .animation(.spring, value: state)
-        .onAppear {
-            bob = true
-            Task { @MainActor in
-                while true {
-                    try? await Task.sleep(for: .seconds(Double.random(in: 2.5...4.5)))
-                    withAnimation(.easeInOut(duration: 0.08)) { blink = true }
-                    try? await Task.sleep(for: .milliseconds(140))
-                    withAnimation(.easeInOut(duration: 0.08)) { blink = false }
-                }
+        .onAppear { bob = true }
+        // Cancelled when Pip leaves the screen, so blink loops never pile up.
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(Double.random(in: 2.5...4.5)))
+                guard !Task.isCancelled else { return }
+                withAnimation(.easeInOut(duration: 0.08)) { blink = true }
+                try? await Task.sleep(for: .milliseconds(140))
+                withAnimation(.easeInOut(duration: 0.08)) { blink = false }
             }
         }
     }
