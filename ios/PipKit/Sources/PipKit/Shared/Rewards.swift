@@ -1,11 +1,12 @@
 // FROZEN shared rewards model. Kids earn stars for good reading moments, and
 // Pip visibly levels up (stage 1 to 4) as stars add up. The thresholds are set
-// so one 2 minute session reaches the top stage: reading the page, catching
-// Pip's mistake and teaching him expression each push him up a stage.
+// so one session can reach the top stage: reading a page, catching Pip's
+// mistake and teaching him expression each push him up a stage. Stars are
+// kept across sessions.
 
 import Foundation
 
-public enum RewardEvent: Sendable, Equatable {
+public enum RewardEvent: Codable, Sendable, Equatable {
     case pageRead(correctWords: Int)
     case mistakeCaught
     case expressionLearned
@@ -31,7 +32,7 @@ public enum RewardEvent: Sendable, Equatable {
     }
 }
 
-public struct RewardState: Sendable, Equatable {
+public struct RewardState: Codable, Sendable, Equatable {
     /// Stars needed to reach stage 1, 2, 3, 4.
     public static let stageThresholds = [0, 10, 18, 28]
     public static let stageNames = ["Sprout", "Glow", "Star", "Crown"]

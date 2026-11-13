@@ -1,5 +1,5 @@
-// FROZEN shared API client for the Next.js backend. Every route has a mock
-// path that never touches the network, so the app runs with no server.
+// API client for the Next.js backend. Reading diagnosis and Pip's mistake
+// plan fall back to on-device versions when the server is unreachable.
 
 import Foundation
 
@@ -90,8 +90,12 @@ public struct API: Sendable {
     private struct DiagnoseBody: Encodable { let pageText: String; let alignment: AlignmentResult; let metrics: ReadingMetrics }
 
     public func diagnose(pageText: String, alignment: AlignmentResult, metrics: ReadingMetrics) async throws -> DiagnoseResponse {
-        if mock { return try Self.fixture("diagnose-demo") }
-        return try await post("/api/diagnose", DiagnoseBody(pageText: pageText, alignment: alignment, metrics: metrics))
+        if mock { return localDiagnosis(pageText: pageText, alignment: alignment) }
+        do {
+            return try await post("/api/diagnose", DiagnoseBody(pageText: pageText, alignment: alignment, metrics: metrics))
+        } catch {
+            return localDiagnosis(pageText: pageText, alignment: alignment)
+        }
     }
 
     private struct PracticeBody: Encodable { let pattern: PatternFinding }
@@ -107,8 +111,12 @@ public struct API: Sendable {
     private struct MistakesBody: Encodable { let pageIndex: Int; let pageText: String; let patterns: [PatternFinding] }
 
     public func pipMistakes(pageIndex: Int, pageText: String, patterns: [PatternFinding]) async throws -> PipPlan {
-        if mock { return try Self.fixture("pip-mistakes") }
-        return try await post("/api/pip-mistakes", MistakesBody(pageIndex: pageIndex, pageText: pageText, patterns: patterns))
+        if mock { return localPipPlan(pageIndex: pageIndex, pageText: pageText, patterns: patterns) }
+        do {
+            return try await post("/api/pip-mistakes", MistakesBody(pageIndex: pageIndex, pageText: pageText, patterns: patterns))
+        } catch {
+            return localPipPlan(pageIndex: pageIndex, pageText: pageText, patterns: patterns)
+        }
     }
 
     /// In mock mode returns an empty audioUrl and synthetic word timings; PipPlayer

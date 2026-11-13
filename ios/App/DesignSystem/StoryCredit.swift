@@ -13,10 +13,18 @@ struct StoryCredit: View {
     }
 
     var body: some View {
-        Text("\u{201C}\(book.title)\u{201D} by \(book.author), illustrated by \(book.illustrator). \(book.publisher). \(book.license).")
+        Text(credit)
             .font(.pip(13))
             .foregroundStyle(onPaper ? Palette.ink.opacity(0.65) : Palette.textSoft)
             .lineLimit(2)
             .multilineTextAlignment(.leading)
+    }
+
+    private var credit: String {
+        var parts = ["\u{201C}\(book.title)\u{201D} by \(book.author)"]
+        if !book.illustrator.isEmpty { parts[0] += ", illustrated by \(book.illustrator)" }
+        if !book.publisher.isEmpty { parts.append(book.publisher) }
+        if !book.license.isEmpty { parts.append(book.license) }
+        return parts.joined(separator: ". ") + "."
     }
 }

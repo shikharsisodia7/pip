@@ -1,4 +1,4 @@
-// FROZEN shared session store, same shape as the web store.
+// Shared session store, same shape as the web store.
 // Reading screens write: probePre, read, diagnosis, baselineProsody, probePost, practiceBook.
 // Pip screens write: pipPlan, catches, expression.
 // Anyone may call award, setDebug and registerDebugAction.
@@ -14,7 +14,7 @@ public struct DebugAction: Identifiable {
 
 public let phaseOrder: [Phase] = [.intro, .probePre, .read, .pipReads, .expression, .probePost, .report]
 
-/// Phases visited on a demo path. The 2 minute path skips both probes.
+/// Phases visited on a path. The 2 minute path skips both probes.
 public func phasesFor(_ demoPath: DemoPath) -> [Phase] {
     demoPath == .twoMin ? phaseOrder.filter { $0 != .probePre && $0 != .probePost } : phaseOrder
 }
@@ -27,25 +27,31 @@ public func nextPhase(after current: Phase, demoPath: DemoPath) -> Phase {
 
 @Observable @MainActor
 public final class Session {
+    /// .intro is the home screen; every other phase is part of one reading session.
     public var phase: Phase = .intro
     public var book: Book
     public var readPageIndex = 0
     public var pipPageIndex = 1
     public var probePre: ProbeResult?
     public var probePost: ProbeResult?
+    /// The most recent page the child read.
     public var read: ReadResult?
+    /// Every page read this session, by page index.
+    public var pagesRead: [Int: ReadResult] = [:]
     public var diagnosis: DiagnoseResponse?
     public var baselineProsody: ProsodyStats?
     public var pipPlan: PipPlan?
     public var catches: [CatchResult] = []
     public var expression: ExpressionResult?
     public var practiceBook: PracticeBook?
-    public var rewards = RewardState()
+    /// Stars, Pip's stage and stickers. Kept across sessions.
+    public var rewards: RewardState { didSet { Self.saveRewards(rewards) } }
     public var debug: [String: String] = [:]
     public private(set) var debugActions: [DebugAction] = []
 
     public init(book: Book = .placeholder) {
         self.book = book
+        self.rewards = Self.loadRewards()
     }
 
     /// Stored in Settings so it survives relaunches.
@@ -61,12 +67,36 @@ public final class Session {
 
     public func goto(_ p: Phase) { phase = p }
 
-    /// Starts a fresh session. Keeps the book, demo path and registered debug actions.
+    /// Opens a book at a page and starts a fresh reading session.
+    public func startReading(_ book: Book, page: Int = 0) {
+        clearSession()
+        self.book = book
+        readPageIndex = max(0, min(page, book.pages.count - 1))
+        pipPageIndex = min(readPageIndex + 1, book.pages.count - 1)
+        phase = nextPhase(after: .intro, demoPath: demoPath)
+    }
+
+    /// After the child has read, Pip reads the page after the last one they
+    /// read (or that same page at the end of the book).
+    public func startPipsTurn() {
+        let last = pagesRead.keys.max() ?? readPageIndex
+        pipPageIndex = min(last + 1, book.pages.count - 1)
+        phase = .read
+        advance()
+    }
+
+    /// Back to the home screen. Keeps the book and the stars.
     public func reset() {
+        clearSession()
         phase = .intro
-        probePre = nil; probePost = nil; read = nil; diagnosis = nil; baselineProsody = nil
+    }
+
+    /// Clears stars and stickers too (debug only).
+    public func resetRewards() { rewards = RewardState() }
+
+    private func clearSession() {
+        probePre = nil; probePost = nil; read = nil; pagesRead = [:]; diagnosis = nil; baselineProsody = nil
         pipPlan = nil; catches = []; expression = nil; practiceBook = nil
-        rewards = RewardState()
         debug = [:]
     }
 
@@ -86,5 +116,17 @@ public final class Session {
         debugActions.removeAll { $0.label == label }
         debugActions.append(action)
         return { [weak self] in self?.debugActions.removeAll { $0.id == action.id } }
+    }
+
+    private static let rewardsKey = "PipRewards"
+
+    private static func loadRewards() -> RewardState {
+        guard let data = UserDefaults.standard.data(forKey: rewardsKey),
+              let r = try? JSONDecoder().decode(RewardState.self, from: data) else { return RewardState() }
+        return r
+    }
+
+    private static func saveRewards(_ r: RewardState) {
+        if let data = try? JSONEncoder().encode(r) { UserDefaults.standard.set(data, forKey: rewardsKey) }
     }
 }
