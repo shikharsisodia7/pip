@@ -212,7 +212,7 @@ struct ReadScreen: View {
                 MicButton(state: isListening ? .listening : .idle,
                           label: isListening ? "Tap when you're done" : "Tap and read to Pip", size: 92) { toggle() }
                 if isListening {
-                    Meter(value: Double(MicHub.shared.level), tone: .accent, height: 8).frame(width: 160)
+                    MicLevelMeter().frame(width: 160)
                 }
             }
         }
@@ -399,5 +399,13 @@ enum SampleReading {
         session.read = result
         session.pagesRead[index] = result
         session.diagnosis = localDiagnosis(pageText: page.text, alignment: alignment)
+    }
+}
+
+/// The live mic level in its own view, so only this bar redraws as the level
+/// changes, not the whole page of words.
+struct MicLevelMeter: View {
+    var body: some View {
+        Meter(value: Double(MicHub.shared.level), tone: .accent, height: 8)
     }
 }

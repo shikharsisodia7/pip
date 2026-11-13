@@ -79,8 +79,13 @@ struct PipBackdrop: View {
     var body: some View {
         ZStack {
             Palette.backgroundGradient
-            Circle().fill(Palette.purple.opacity(0.25)).frame(width: 420).blur(radius: 120).offset(x: -160, y: -300)
-            Circle().fill(Palette.accent.opacity(0.18)).frame(width: 380).blur(radius: 120).offset(x: 180, y: 320)
+            // Full-size radial gradients rather than blurred circles: the same
+            // glow, drawn once instead of filtered on every frame, and they
+            // never change the layout size.
+            RadialGradient(colors: [Palette.purple.opacity(0.25), .clear],
+                           center: UnitPoint(x: 0.1, y: 0.16), startRadius: 0, endRadius: 330)
+            RadialGradient(colors: [Palette.accent.opacity(0.18), .clear],
+                           center: UnitPoint(x: 0.95, y: 0.87), startRadius: 0, endRadius: 310)
         }
     }
 }
