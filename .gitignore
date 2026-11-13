@@ -49,3 +49,6 @@ eval/.cache/
 eval/data/
 eval/.venv/
 __pycache__/
+
+# local dev tooling (kept out of the public repo)
+.superset/
