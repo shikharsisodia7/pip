@@ -1,0 +1,6 @@
+{
+  "mistakes": [
+    { "correct": "shook", "misread": "shock", "speakAs": "shock", "reaction": "Oh! Shook, not shock. Thank you, teacher!" },
+    { "correct": "jumped", "misread": "jump", "speakAs": "jump", "reaction": "Jumped! I forgot the ending. You're a great teacher!" }
+  ]
+}
