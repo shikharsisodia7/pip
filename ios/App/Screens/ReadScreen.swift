@@ -110,10 +110,15 @@ struct ReadScreen: View {
                 Text(book.title).font(.pip(15, .bold)).foregroundStyle(.white).lineLimit(1)
                 TrackBar(value: Double(index + 1) / Double(max(1, book.pages.count)))
             }
-            Text("\(index + 1)/\(book.pages.count)")
-                .font(.pip(15, .bold))
-                .foregroundStyle(Palette.textSoft)
-                .monospacedDigit()
+            HStack(spacing: 2) {
+                pageArrow("chevron.left", label: "Previous page", enabled: index > 0) { goToPage(index - 1) }
+                Text("\(index + 1)/\(book.pages.count)")
+                    .font(.pip(15, .bold))
+                    .foregroundStyle(Palette.textSoft)
+                    .monospacedDigit()
+                    .fixedSize()
+                pageArrow("chevron.right", label: "Next page", enabled: !isLast) { goToPage(index + 1) }
+            }
             Label("\(session.rewards.stars)", systemImage: "star.fill")
                 .font(.pip(15, .bold))
                 .foregroundStyle(Palette.sun)
@@ -121,6 +126,30 @@ struct ReadScreen: View {
                 .background(Capsule().fill(Palette.glass))
                 .contentTransition(.numericText())
         }
+    }
+
+    private func pageArrow(_ icon: String, label: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .heavy))
+                .foregroundStyle(.white)
+                .frame(width: 30, height: 30)
+                .background(Circle().fill(Palette.glass))
+                .overlay(Circle().strokeBorder(Palette.stroke))
+                .frame(width: 38, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(SquishStyle())
+        .disabled(!enabled)
+        .opacity(enabled ? 1 : 0.3)
+        .accessibilityLabel(label)
+    }
+
+    /// Moves to another page, dropping any reading in progress on this one.
+    private func goToPage(_ i: Int) {
+        guard book.pages.indices.contains(i), i != index else { return }
+        if listener != nil { Task { await stopListening(save: false) } }
+        withAnimation(.spring(duration: 0.35)) { session.readPageIndex = i }
     }
 
     private func sceneCard(_ page: BookPage) -> some View {
