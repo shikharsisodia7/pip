@@ -358,7 +358,6 @@ struct StickersTabView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     earn("book.fill", Palette.blueOrb, "Read a page to Pip", "up to 12")
                     earn("hand.raised.fill", Palette.pinkOrb, "Catch Pip's mistake", "8")
-                    earn("theatermasks.fill", Palette.purpleOrb, "Teach Pip to read with feeling", "10")
                 }
             }
         }

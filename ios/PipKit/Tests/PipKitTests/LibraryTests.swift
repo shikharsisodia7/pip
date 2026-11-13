@@ -45,7 +45,7 @@ final class LibraryTests: XCTestCase {
         XCTAssertEqual(session.phase, .pipReads)
         XCTAssertEqual(session.pipPageIndex, 1)
         for _ in 1..<book.pages.count { session.childReadsPage(); session.nextPage() }
-        XCTAssertEqual(session.phase, .expression)
+        XCTAssertEqual(session.phase, .report)
     }
 
     func testFromTextEmpty() {
