@@ -4,6 +4,11 @@ You own only the paths listed in your task. Never edit any other path, including
 If you need a change outside your paths, stop and say so in your final message.
 Develop with NEXT_PUBLIC_MOCK=1 unless your task says you own a live integration.
 Never start `next dev` on port 3000 inside a worktree; use PORT=31xx.
+The iOS app lives in ios/. Read docs/internal/IOS_CONTRACT.md if present.
+Never commit *.xcodeproj, ios/Local.xcconfig, signing team IDs or bundle IDs tied to a person.
+PipKit is pure logic: no AVFoundation, no UIKit. Run `swift test` in ios/PipKit before finishing.
+Run `xcodegen` in ios/ after pulling. Do not edit ios/project.yml, PipApp.swift, RootView.swift,
+Shared/* or DesignSystem/* unless your task says you own them.
 Before you finish: npm run check must pass. Commit with a clear message. Do not push to main.
 Prefer the simplest thing that makes the demo path reliable and beautiful. No generality.
 Kid-facing copy: warm, short, never a grade. No em dashes in any copy.
