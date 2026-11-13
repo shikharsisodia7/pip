@@ -8,6 +8,7 @@ import PipKit
 
 struct ExpressionScreen: View {
     @Environment(Session.self) private var session
+    @Environment(\.horizontalSizeClass) private var hSize
 
     private enum Stage: Equatable {
         case loading, pipFlat, asking, ready, recording, scoring, retry, learning, learned, practicing
@@ -83,20 +84,25 @@ struct ExpressionScreen: View {
         }
     }
 
+    private var compact: Bool { hSize == .compact }
+
     var body: some View {
         ZStack {
-            VStack(spacing: 12) {
-                HStack(alignment: .center, spacing: 16) {
-                    pip
-                    lineCard
-                        .padding(.trailing, 190) // leaves room for the star counter
+            if compact {
+                portrait
+            } else {
+                VStack(spacing: 12) {
+                    HStack(alignment: .center, spacing: 16) {
+                        pip
+                        lineCard
+                    }
+                    PitchContourView(frames: frames, active: stage == .recording)
+                        .frame(minHeight: 110, maxHeight: .infinity)
+                    controls
                 }
-                PitchContourView(frames: frames, active: stage == .recording)
-                    .frame(minHeight: 110, maxHeight: .infinity)
-                controls
+                .padding(.horizontal, 28)
+                .padding(.vertical, 16)
             }
-            .padding(.horizontal, 28)
-            .padding(.vertical, 16)
 
             if confetti > 0 {
                 Celebration().id(confetti)
@@ -110,6 +116,77 @@ struct ExpressionScreen: View {
             autoStop?.cancel()
             PipPlayer.shared.stop()
             _ = recorder?.stop()
+        }
+    }
+
+    // MARK: Portrait
+
+    private var portrait: some View {
+        VStack(spacing: 14) {
+            Text("How should it sound?")
+                .font(.pip(22, .bold))
+                .foregroundStyle(Palette.text)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .padding(.horizontal, 48) // clear of the close button
+            HStack(alignment: .center, spacing: 12) {
+                PipView(state: pipState, size: 92)
+                if pipBusy, !bubble.isEmpty, bubble != line.text {
+                    Text(bubble)
+                        .font(.pip(19, .semibold))
+                        .foregroundStyle(Palette.ink)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(Palette.paper, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .shadow(color: .black.opacity(0.2), radius: 10, y: 4)
+                        .transition(.scale(scale: 0.8, anchor: .leading).combined(with: .opacity))
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(minHeight: 100)
+            .animation(.spring(duration: 0.3), value: bubble)
+            lineCard
+            PitchContourView(frames: frames, active: stage == .recording)
+                .frame(minHeight: 130, maxHeight: .infinity)
+            portraitControls
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 4)
+        .padding(.bottom, 10)
+    }
+
+    private var portraitControls: some View {
+        VStack(spacing: 12) {
+            Meter(value: meterValue, label: "Feeling", tone: learned ? .sun : .accent, height: 14)
+            if !prompt.isEmpty {
+                Text(prompt)
+                    .font(.pip(19, .semibold))
+                    .foregroundStyle(Palette.text)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if done {
+                HStack(spacing: 12) {
+                    if stage == .learned {
+                        BigButton("Hear Pip", variant: .secondary, systemImage: "speaker.wave.2.fill") {
+                            Task { await readExpressive() }
+                        }
+                    }
+                    BigButton("Next", systemImage: "arrow.right") { session.advance() }
+                }
+            } else {
+                ZStack {
+                    MicButton(state: stage == .recording ? .listening : (stage == .ready ? .idle : .disabled),
+                              label: stage == .recording ? "Tap when you finish" : (stage == .ready ? "Say it with feeling" : "Pip is talking"),
+                              size: 84) {
+                        if stage == .recording { Task { await stopRecording() } } else if stage == .ready { startRecording() }
+                    }
+                    Button("Skip") { session.advance() }
+                        .font(.pip(17, .bold))
+                        .foregroundStyle(Palette.textSoft)
+                        .frame(minWidth: 60, minHeight: 44)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
+            }
         }
     }
 
@@ -135,7 +212,7 @@ struct ExpressionScreen: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
                 if let s = line.speaker {
-                    Text("\(s) says:").font(.pip(18, .semibold)).foregroundStyle(Palette.ink.opacity(0.6))
+                    Text("\(s.prefix(1).uppercased() + s.dropFirst()) says:").font(.pip(18, .semibold)).foregroundStyle(Palette.ink.opacity(0.6))
                 }
                 HStack(spacing: 6) {
                     Text(hint.icon)
@@ -143,6 +220,8 @@ struct ExpressionScreen: View {
                 }
                 .font(.pip(16))
                 .foregroundStyle(Palette.ink)
+                .lineLimit(1)
+                .fixedSize()
                 .padding(.horizontal, 12).padding(.vertical, 6)
                 .background(Color.white, in: Capsule())
                 Spacer()
@@ -150,7 +229,7 @@ struct ExpressionScreen: View {
             FlowLayout(spacing: 6, lineSpacing: 6) {
                 ForEach(Array(words.enumerated()), id: \.offset) { i, w in
                     Text(w)
-                        .font(.pip(34, .bold))
+                        .font(.pip(compact ? 30 : 34, .bold))
                         .foregroundStyle(Palette.ink)
                         .padding(.horizontal, 4)
                         .background(

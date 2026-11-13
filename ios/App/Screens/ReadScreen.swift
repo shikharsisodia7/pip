@@ -41,18 +41,25 @@ struct ReadScreen: View {
     var body: some View {
         VStack(spacing: 14) {
             topBar
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 16) {
-                    if let page {
-                        sceneCard(page)
-                        storyCard(page)
+            ScrollViewReader { proxy in
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 16) {
+                        if let page {
+                            sceneCard(page)
+                            storyCard(page)
+                        }
+                        if let error {
+                            Text(error).font(.pip(15, .semibold)).foregroundStyle(Palette.sun).multilineTextAlignment(.center)
+                        }
+                        if finished { resultCard.id("result") }
                     }
-                    if let error {
-                        Text(error).font(.pip(15, .semibold)).foregroundStyle(Palette.sun).multilineTextAlignment(.center)
-                    }
-                    if finished { resultCard }
+                    .padding(.bottom, 12)
                 }
-                .padding(.bottom, 12)
+                .task(id: "\(finished)\(thinking)") {
+                    guard finished else { return }
+                    try? await Task.sleep(for: .milliseconds(350))
+                    withAnimation(.spring(duration: 0.5)) { proxy.scrollTo("result", anchor: .bottom) }
+                }
             }
             controls
         }
@@ -65,6 +72,7 @@ struct ReadScreen: View {
             registerDebug()
             #if DEBUG
             if UserDefaults.standard.bool(forKey: "PipAutoListen") { toggle() }
+            if UserDefaults.standard.bool(forKey: "PipSampleRead") { sampleReading() }
             #endif
         }
         .onChange(of: index) { resetPage() }
@@ -101,13 +109,14 @@ struct ReadScreen: View {
                 .fill(Color(hexString: page.scene.bg) ?? Palette.paper)
                 .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).strokeBorder(.white.opacity(0.4), lineWidth: 2))
             Text(page.scene.emoji)
-                .font(.system(size: hSize == .compact ? 64 : 80))
+                .font(.system(size: finished ? 40 : (hSize == .compact ? 64 : 80)))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            PipView(state: pipState, size: 86)
+            PipView(state: pipState, size: finished ? 70 : 86)
                 .padding(.trailing, 4)
                 .padding(.bottom, -10)
         }
-        .frame(height: hSize == .compact ? 170 : 200)
+        // After a page the scene steps back so the result has room.
+        .frame(height: finished ? 100 : (hSize == .compact ? 170 : 200))
         .shadow(color: .black.opacity(0.25), radius: 14, y: 8)
     }
 
@@ -259,13 +268,32 @@ struct ReadScreen: View {
     }
 
     private func registerDebug() {
-        session.registerDebugAction("Read this page with a sample reading") {
-            guard let page else { return }
-            let words = tokenizeDisplay(page.text).enumerated().compactMap { i, t -> TimedWord? in
-                if i == 3 { return nil }
-                return TimedWord(text: i == 6 ? "ball" : t.norm, start: Double(i) * 0.45 + (i > 9 ? 1.5 : 0), end: Double(i) * 0.45 + 0.35 + (i > 9 ? 1.5 : 0))
-            }
-            finish(Transcript(text: words.map(\.text).joined(separator: " "), words: words), prosody: nil)
+        session.registerDebugAction("Read this page with a sample reading") { sampleReading() }
+    }
+
+    private func sampleReading() {
+        guard let page else { return }
+        finish(SampleReading.transcript(for: page.text), prosody: nil)
+    }
+}
+
+/// A made-up reading with one skipped word, one misread word and one long
+/// pause, for the debug panel and screenshots. Never shown as a real result.
+enum SampleReading {
+    static func transcript(for text: String) -> Transcript {
+        let words = tokenizeDisplay(text).enumerated().compactMap { i, t -> TimedWord? in
+            if i == 3 { return nil }
+            return TimedWord(text: i == 6 ? "ball" : t.norm, start: Double(i) * 0.45 + (i > 9 ? 1.5 : 0), end: Double(i) * 0.45 + 0.35 + (i > 9 ? 1.5 : 0))
         }
+        return Transcript(text: words.map(\.text).joined(separator: " "), words: words)
+    }
+
+    @MainActor static func fill(_ session: Session, page index: Int) {
+        guard let page = session.book.pages[safe: index] else { return }
+        let alignment = alignWords(expectedText: page.text, transcript: transcript(for: page.text))
+        let result = ReadResult(transcript: transcript(for: page.text), alignment: alignment, metrics: computeMetrics(alignment))
+        session.read = result
+        session.pagesRead[index] = result
+        session.diagnosis = localDiagnosis(pageText: page.text, alignment: alignment)
     }
 }

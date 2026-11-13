@@ -29,7 +29,9 @@ struct BigButton: View {
                 Text(title)
             }
             .font(.pip(24, .bold))
-            .padding(.horizontal, 36)
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+            .padding(.horizontal, 28)
             .frame(minHeight: 64)
         }
         .buttonStyle(PipPillStyle(variant: variant))
