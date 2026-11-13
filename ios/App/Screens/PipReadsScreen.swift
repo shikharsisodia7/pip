@@ -40,8 +40,11 @@ struct PipReadsScreen: View {
                 scene
                 VStack(alignment: .leading, spacing: 14) {
                     Text("Your turn to be the teacher!")
-                        .font(.pip(30, .bold))
+                        .font(.pip(28, .bold))
                         .foregroundStyle(Palette.text)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .padding(.trailing, 200) // leaves room for the star counter
                     VStack(alignment: .leading, spacing: 14) {
                         words
                         StoryCredit(book: session.book, onPaper: true)

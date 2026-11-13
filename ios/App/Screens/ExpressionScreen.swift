@@ -89,9 +89,10 @@ struct ExpressionScreen: View {
                 HStack(alignment: .center, spacing: 16) {
                     pip
                     lineCard
+                        .padding(.trailing, 190) // leaves room for the star counter
                 }
                 PitchContourView(frames: frames, active: stage == .recording)
-                    .frame(maxHeight: .infinity)
+                    .frame(minHeight: 110, maxHeight: .infinity)
                 controls
             }
             .padding(.horizontal, 28)
@@ -116,8 +117,8 @@ struct ExpressionScreen: View {
 
     private var pip: some View {
         ZStack(alignment: .top) {
-            PipView(state: pipState, size: 120)
-                .padding(.top, 36)
+            PipView(state: pipState, size: 110)
+                .padding(.top, 30)
             if pipBusy, !bubble.isEmpty, bubble != line.text {
                 SpeechBubble(text: bubble)
                     .frame(width: 230)
@@ -126,17 +127,16 @@ struct ExpressionScreen: View {
                     .zIndex(1)
             }
         }
-        .frame(width: 170)
+        .frame(width: 150)
         .animation(.spring(duration: 0.3), value: bubble)
     }
 
     private var lineCard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
+            HStack(spacing: 10) {
                 if let s = line.speaker {
                     Text("\(s) says:").font(.pip(18, .semibold)).foregroundStyle(Palette.ink.opacity(0.6))
                 }
-                Spacer()
                 HStack(spacing: 6) {
                     Text(hint.icon)
                     Text("Feeling: ").foregroundStyle(Palette.ink.opacity(0.6)) + Text(hint.word).bold()
@@ -145,11 +145,12 @@ struct ExpressionScreen: View {
                 .foregroundStyle(Palette.ink)
                 .padding(.horizontal, 12).padding(.vertical, 6)
                 .background(Color.white, in: Capsule())
+                Spacer()
             }
             FlowLayout(spacing: 6, lineSpacing: 6) {
                 ForEach(Array(words.enumerated()), id: \.offset) { i, w in
                     Text(w)
-                        .font(.pip(40, .bold))
+                        .font(.pip(34, .bold))
                         .foregroundStyle(Palette.ink)
                         .padding(.horizontal, 4)
                         .background(
@@ -159,7 +160,7 @@ struct ExpressionScreen: View {
                 }
             }
         }
-        .padding(20)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Palette.paper, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
         .overlay(alignment: .topTrailing) {

@@ -30,7 +30,7 @@ struct PitchContourView: View {
                 Text(active ? "Say it out loud!" : "Your voice will draw here")
                     .font(.system(size: 22, weight: .semibold, design: .rounded))
                     .foregroundStyle(Color(red: 0.56, green: 0.5, blue: 0.42))
-                    .offset(y: 54)
+                    .offset(y: 34)
             }
         }
         .accessibilityLabel("Your voice, drawn as a line that goes up and down")
