@@ -1,0 +1,18 @@
+{
+  "title": "Pip Tries a Word",
+  "pattern": {
+    "id": "ee",
+    "kidLabel": "the 'ee' sound",
+    "teacherLabel": "vowel team: ee",
+    "evidenceWords": [],
+    "confidence": 0
+  },
+  "sentences": [
+    "Pip the owl saw the word tree.",
+    "The word tree was in his book.",
+    "Pip tried to say tree but got stuck.",
+    "His pal helped him read tree.",
+    "Pip read tree to his pal.",
+    "Now Pip can read tree on his own."
+  ]
+}
