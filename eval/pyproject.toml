@@ -1,0 +1,9 @@
+[project]
+name = "pip-listening-eval"
+version = "0.1.0"
+description = "Word flag evaluation against speechocean762 expert annotations"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.uv]
+package = false
