@@ -191,6 +191,64 @@ struct SceneTile: View {
     }
 }
 
+/// Small translucent chip with an icon, for book facts.
+struct MetaChip: View {
+    let systemImage: String
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: systemImage).font(.system(size: 10, weight: .bold))
+            Text(text).font(.pip(12, .bold))
+        }
+        .foregroundStyle(.white.opacity(0.9))
+        .lineLimit(1)
+        .fixedSize()
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(.white.opacity(0.16), in: Capsule())
+    }
+}
+
+/// A row of page dots: read pages are checked, the next page glows.
+struct PagePath: View {
+    let pages: Int
+    let done: Set<Int>
+    let next: Int
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(0..<pages, id: \.self) { i in
+                if i > 0 {
+                    Capsule()
+                        .fill(done.contains(i - 1) ? Palette.mint : .white.opacity(0.22))
+                        .frame(width: 10, height: 4)
+                }
+                node(i)
+            }
+        }
+    }
+
+    @ViewBuilder private func node(_ i: Int) -> some View {
+        let isDone = done.contains(i)
+        let isNext = i == next && !isDone
+        ZStack {
+            Circle()
+                .fill(isDone ? AnyShapeStyle(LinearGradient(colors: Palette.mintOrb, startPoint: .top, endPoint: .bottom))
+                      : isNext ? AnyShapeStyle(LinearGradient(colors: [Palette.sun, Palette.orange], startPoint: .top, endPoint: .bottom))
+                      : AnyShapeStyle(.white.opacity(0.18)))
+            Circle().strokeBorder(.white.opacity(isNext ? 0.9 : 0.25), lineWidth: isNext ? 2.5 : 1)
+            if isDone {
+                Image(systemName: "checkmark").font(.system(size: 12, weight: .heavy)).foregroundStyle(.white)
+            } else {
+                Text("\(i + 1)").font(.pip(13, .bold)).foregroundStyle(isNext ? Palette.ink : .white.opacity(0.7))
+            }
+        }
+        .frame(width: isNext ? 32 : 26, height: isNext ? 32 : 26)
+        .shadow(color: isNext ? Palette.sun.opacity(0.7) : .clear, radius: 8)
+    }
+}
+
 /// Book row card: gradient, title, level and minutes, cover tile and progress.
 struct BookCard: View {
     let book: Book
@@ -205,9 +263,11 @@ struct BookCard: View {
                         .font(.pip(19, .bold))
                         .foregroundStyle(.white)
                         .lineLimit(2)
-                    Text("Level \(book.level)  ·  \(book.minutes) min  ·  \(book.pages.count) pages")
-                        .font(.pip(13, .semibold))
-                        .foregroundStyle(.white.opacity(0.75))
+                    HStack(spacing: 6) {
+                        MetaChip(systemImage: "chart.bar.fill", text: "Level \(book.level)")
+                        MetaChip(systemImage: "book.pages.fill", text: "\(book.pages.count) pages")
+                        MetaChip(systemImage: "clock.fill", text: "\(book.minutes) min")
+                    }
                     if progress > 0 {
                         TrackBar(value: progress, colors: [Palette.mint, Color(hex: 0x23A884)])
                             .frame(maxWidth: 160)

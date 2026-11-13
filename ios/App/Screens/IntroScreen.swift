@@ -164,10 +164,15 @@ struct HomeTabView: View {
                             Spacer()
                             Orb(systemImage: "arrow.right", colors: [Color(hex: 0x5FD0FF), Color(hex: 0x1F7FC0)], size: 46)
                         }
-                        ProgressPill(value: progress)
-                        Text(book.pages.first?.scene.emoji ?? "📖")
-                            .font(.system(size: 34))
-                            .padding(.top, 18)
+                        Spacer(minLength: 6)
+                        if book.pages.count <= 7 {
+                            PagePath(pages: book.pages.count, done: library.pagesDone[book.id] ?? [], next: library.nextPage(book))
+                        } else {
+                            ProgressPill(value: progress)
+                        }
+                        Text("Page \(library.nextPage(book) + 1) of \(book.pages.count)")
+                            .font(.pip(14, .semibold))
+                            .foregroundStyle(.white.opacity(0.8))
                     }
                     .frame(minHeight: 170, alignment: .top)
                 }
@@ -325,14 +330,16 @@ struct StickersTabView: View {
                     let unlocked = r.stage >= stage
                     GlassCard(radius: 24, padding: 14) {
                         VStack(spacing: 8) {
-                            ZStack {
-                                PipView(state: .idle, size: 80, stage: stage)
-                                    .saturation(unlocked ? 1 : 0)
-                                    .opacity(unlocked ? 1 : 0.35)
-                                if !unlocked {
-                                    Image(systemName: "lock.fill").font(.system(size: 26)).foregroundStyle(.white)
+                            PipView(state: .idle, size: 80, stage: stage)
+                                .saturation(unlocked ? 1 : 0)
+                                .brightness(unlocked ? 0 : -0.25)
+                                .opacity(unlocked ? 1 : 0.5)
+                                .overlay(alignment: .topTrailing) {
+                                    if !unlocked {
+                                        Orb(systemImage: "lock.fill", colors: [Color(hex: 0x8C93C9), Color(hex: 0x4A5091)], size: 30)
+                                            .offset(x: 10, y: -4)
+                                    }
                                 }
-                            }
                             Text(RewardState.stageNames[stage - 1]).font(.pip(17, .bold)).foregroundStyle(.white)
                             Text(unlocked ? "Unlocked" : "\(RewardState.stageThresholds[stage - 1]) stars")
                                 .font(.pip(13, .semibold)).foregroundStyle(unlocked ? Palette.mint : Palette.textSoft)
