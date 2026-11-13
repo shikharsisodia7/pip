@@ -9,6 +9,7 @@ import PipKit
 
 struct PipReadsScreen: View {
     @Environment(Session.self) private var session
+    @Environment(\.horizontalSizeClass) private var hSize
 
     @State private var plan: PipPlan?
     @State private var lit: Set<Int> = []
@@ -34,30 +35,11 @@ struct PipReadsScreen: View {
     private var page: BookPage? { session.pipPage }
     private var tokens: [Token] { tokenizeDisplay(page?.text ?? "") }
 
+    private var compact: Bool { hSize == .compact }
+
     var body: some View {
         ZStack {
-            HStack(spacing: 22) {
-                scene
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("Your turn to be the teacher!")
-                        .font(.pip(28, .bold))
-                        .foregroundStyle(Palette.text)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                        .padding(.trailing, 200) // leaves room for the star counter
-                    VStack(alignment: .leading, spacing: 14) {
-                        words
-                        StoryCredit(book: session.book, onPaper: true)
-                    }
-                    .padding(22)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Palette.paper, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-                    controls
-                }
-            }
-            .padding(.horizontal, 28)
-            .padding(.vertical, 18)
-
+            if compact { portrait } else { landscape }
             if confetti > 0 { Celebration().id(confetti) }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -70,26 +52,87 @@ struct PipReadsScreen: View {
         }
     }
 
+    // MARK: Layouts
+
+    private var title: some View {
+        Text("Your turn to be the teacher!")
+            .font(.pip(compact ? 22 : 28, .bold))
+            .foregroundStyle(Palette.text)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+    }
+
+    private var landscape: some View {
+        HStack(spacing: 22) {
+            scene.frame(width: 270)
+            VStack(alignment: .leading, spacing: 14) {
+                title
+                paper
+                controls
+            }
+        }
+        .padding(.horizontal, 28)
+        .padding(.vertical, 18)
+    }
+
+    private var portrait: some View {
+        VStack(spacing: 14) {
+            title
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .padding(.horizontal, 48) // clear of the close button
+            scene.frame(height: 230)
+            ScrollView(showsIndicators: false) { paper }
+            controls
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 4)
+        .padding(.bottom, 10)
+    }
+
     // MARK: Pieces
 
     private var scene: some View {
         ZStack(alignment: .top) {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(Color(hexString: page?.scene.bg ?? "") ?? Palette.surface)
-            VStack {
-                Spacer()
-                Text(page?.scene.emoji ?? "📖").font(.system(size: 54)).opacity(0.85)
-                PipView(state: pipState, size: 130)
-                    .padding(.bottom, 12)
+                .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).strokeBorder(.white.opacity(0.4), lineWidth: 2))
+            if compact {
+                HStack(alignment: .bottom) {
+                    PipView(state: pipState, size: 118)
+                    Spacer()
+                    Text(page?.scene.emoji ?? "📖").font(.system(size: 44)).opacity(0.85)
+                        .padding(.bottom, 18)
+                }
+                .padding(.horizontal, 18)
+                .padding(.bottom, 6)
+                .frame(maxHeight: .infinity, alignment: .bottom)
+            } else {
+                VStack {
+                    Spacer()
+                    Text(page?.scene.emoji ?? "📖").font(.system(size: 54)).opacity(0.85)
+                    PipView(state: pipState, size: 130)
+                        .padding(.bottom, 12)
+                }
             }
             if !bubble.isEmpty {
                 SpeechBubble(text: bubble)
                     .padding(10)
+                    .frame(maxWidth: .infinity, alignment: compact ? .trailing : .center)
                     .transition(.scale.combined(with: .opacity))
             }
         }
-        .frame(width: 270)
+        .shadow(color: .black.opacity(0.25), radius: 14, y: 8)
         .animation(.spring(duration: 0.3), value: bubble)
+    }
+
+    private var paper: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            words
+            StoryCredit(book: session.book, onPaper: true)
+        }
+        .padding(22)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Palette.paper, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
     }
 
     private var words: some View {
@@ -99,7 +142,7 @@ struct PipReadsScreen: View {
                 let showMisread = m != nil && !fixed.contains(i) && sentenceStarted(m!.sentenceIndex)
                 Button { tapped(i) } label: {
                     Text(showMisread ? misreadDisplay(t.display, m!.misread) : t.display)
-                        .font(.pip(32, .semibold))
+                        .font(.pip(compact ? 27 : 32, .semibold))
                         .foregroundStyle(Palette.ink)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -123,12 +166,14 @@ struct PipReadsScreen: View {
     }
 
     private var controls: some View {
-        HStack(spacing: 18) {
+        let layout = compact ? AnyLayout(VStackLayout(spacing: 12)) : AnyLayout(HStackLayout(spacing: 18))
+        return layout {
             if listening {
                 MicButton(state: .listening, label: "Tap when you finish", size: 76) { stopRequested = true }
                 Text(listener?.partialText.isEmpty == false ? "\u{201C}\(listener!.partialText)\u{201D}" : "Pip is listening. Did he get it right?")
                     .font(.pip(20, .semibold))
                     .foregroundStyle(Palette.text)
+                    .multilineTextAlignment(compact ? .center : .leading)
                     .lineLimit(2)
             } else if finished {
                 Text("You're a great teacher!")
@@ -138,8 +183,9 @@ struct PipReadsScreen: View {
                 Text("Listen closely. You can tap a word Pip got wrong.")
                     .font(.pip(18))
                     .foregroundStyle(Palette.textSoft)
+                    .multilineTextAlignment(compact ? .center : .leading)
             }
-            Spacer()
+            if !compact { Spacer() }
             if finished {
                 BigButton("Next", systemImage: "arrow.right") { session.advance() }
             } else {
