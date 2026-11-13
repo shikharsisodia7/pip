@@ -7,8 +7,6 @@ import PipKit
 struct ReportScreen: View {
     @Environment(Session.self) private var session
     @State private var showPractice = false
-    @State private var startStars = 0
-    @State private var saved = false
 
     var body: some View {
         let totals = session.sessionTotals
@@ -39,7 +37,7 @@ struct ReportScreen: View {
                     if let e = session.expression {
                         tile("theatermasks.fill", Palette.orangeOrb, String(format: "%.1fx", e.score), "more expression than your first read")
                     }
-                    tile("star.fill", Palette.orangeOrb, "+\(max(0, session.rewards.stars - startStars))", "stars today")
+                    tile("star.fill", Palette.orangeOrb, "+\(max(0, session.rewards.stars - session.startStars))", "stars today")
                 }
 
                 if let p = session.diagnosis?.patterns.first {
@@ -79,10 +77,7 @@ struct ReportScreen: View {
                     if session.diagnosis != nil {
                         BigButton("Pip's Practice Book", variant: .secondary, systemImage: "book.closed.fill") { showPractice = true }
                     }
-                    BigButton("Back home", systemImage: "house.fill") {
-                        saveSummary()
-                        session.reset()
-                    }
+                    BigButton("Back home", systemImage: "house.fill") { session.reset() }
                 }
                 .padding(.top, 4)
             }
@@ -91,12 +86,6 @@ struct ReportScreen: View {
             .frame(maxWidth: .infinity)
         }
         .sheet(isPresented: $showPractice) { PracticeScreen().environment(session) }
-        .onAppear {
-            let earned = (session.pagesRead.values.map { RewardEvent.pageRead(correctWords: $0.metrics.wordsCorrect).stars }.reduce(0, +))
-                + (session.catches.contains(where: \.caught) ? RewardEvent.mistakeCaught.stars : 0)
-                + ((session.expression?.passed ?? false) ? RewardEvent.expressionLearned.stars : 0)
-            startStars = max(0, session.rewards.stars - earned)
-        }
     }
 
     private func tile(_ icon: String, _ colors: [Color], _ value: String, _ label: String) -> some View {
@@ -107,22 +96,6 @@ struct ReportScreen: View {
                 Text(label).font(.pip(13, .semibold)).foregroundStyle(Palette.textSoft).fixedSize(horizontal: false, vertical: true)
             }
         }
-    }
-
-    private func saveSummary() {
-        guard !saved, !session.pagesRead.isEmpty else { return }
-        saved = true
-        let t = session.sessionTotals
-        ReadingLog.shared.add(SessionSummary(
-            bookTitle: session.book.title,
-            pages: session.pagesRead.count,
-            wordsCorrect: t.correct,
-            wordsTotal: t.total,
-            wcpm: t.seconds > 5 ? (Double(t.correct) / (t.seconds / 60)).rounded() : nil,
-            trickySound: session.diagnosis?.patterns.first?.kidLabel,
-            trickyWords: session.trickyWords,
-            starsEarned: max(0, session.rewards.stars - startStars)
-        ))
     }
 }
 

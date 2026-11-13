@@ -13,6 +13,23 @@ final class LibraryTests: XCTestCase {
         XCTAssertEqual(tokenize(book.pages.map(\.text).joined(separator: " ")), tokenize(text))
     }
 
+    @MainActor func testSummaryCountsPagesReadThisSession() {
+        let session = Session()
+        session.startReading(BuiltInBooks.lionAndMouse)
+        XCTAssertNil(session.summary())
+        let page = BuiltInBooks.lionAndMouse.pages[0]
+        let words = tokenizeDisplay(page.text).enumerated().map { i, t in
+            TimedWord(text: t.norm, start: Double(i) * 0.4, end: Double(i) * 0.4 + 0.3)
+        }
+        let alignment = alignWords(expectedText: page.text, transcript: Transcript(text: "", words: words))
+        session.pagesRead[0] = ReadResult(transcript: Transcript(text: "", words: words), alignment: alignment, metrics: computeMetrics(alignment))
+        session.award(.pageRead(correctWords: alignment.words.count))
+        let s = session.summary()
+        XCTAssertEqual(s?.pages, 1)
+        XCTAssertEqual(s?.wordsCorrect, s?.wordsTotal)
+        XCTAssertEqual(s?.starsEarned, RewardEvent.pageRead(correctWords: alignment.words.count).stars)
+    }
+
     func testFromTextEmpty() {
         XCTAssertTrue(Book.fromText(title: "", text: "  \n ").pages.isEmpty)
     }

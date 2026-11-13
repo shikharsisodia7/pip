@@ -210,6 +210,22 @@ public extension Session {
         }
     }
 
+    /// This session for the reading log, or nil when no page was read.
+    func summary() -> SessionSummary? {
+        guard !pagesRead.isEmpty else { return nil }
+        let t = sessionTotals
+        return SessionSummary(
+            bookTitle: book.title,
+            pages: pagesRead.count,
+            wordsCorrect: t.correct,
+            wordsTotal: t.total,
+            wcpm: t.seconds > 5 ? (Double(t.correct) / (t.seconds / 60)).rounded() : nil,
+            trickySound: diagnosis?.patterns.first?.kidLabel,
+            trickyWords: trickyWords,
+            starsEarned: max(0, rewards.stars - startStars)
+        )
+    }
+
     /// Words the child skipped or misread this session, in page order, without repeats.
     var trickyWords: [String] {
         var seen = Set<String>()
