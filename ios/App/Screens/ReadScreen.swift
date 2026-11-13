@@ -242,24 +242,15 @@ struct ReadScreen: View {
         if finished {
             HStack(spacing: 12) {
                 BigButton("Again", variant: .secondary, systemImage: "arrow.counterclockwise") { resetPage() }
-                if isLast {
-                    BigButton("Pip's turn!", systemImage: "arrow.right") { session.startPipsTurn() }
-                } else {
-                    BigButton("Next page", systemImage: "arrow.right") { session.readPageIndex += 1 }
-                }
+                BigButton(isLast ? "Finish" : "Next page", systemImage: isLast ? "flag.checkered" : "arrow.right") { session.nextPage() }
             }
             if !isLast {
-                Button("I'm done, Pip's turn!") { session.startPipsTurn() }
+                Button("I'm done for today") { session.finishBook() }
                     .font(.pip(16, .bold))
                     .foregroundStyle(Palette.accent)
             }
         } else {
-            VStack(spacing: 18) {
-                if !isListening {
-                    BigButton("Hear Pip read it first", variant: .secondary, systemImage: "ear.fill") { echoRead() }
-                        .disabled(echoIndex != nil)
-                        .opacity(echoIndex != nil ? 0.5 : 1)
-                }
+            VStack(spacing: 10) {
                 MicButton(state: isListening ? .listening : (echoIndex != nil ? .disabled : .idle),
                           label: isListening ? "Tap when you're done" : (echoIndex != nil ? "Pip is reading" : "Tap and read to Pip"),
                           size: 92) {
