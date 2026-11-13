@@ -69,14 +69,44 @@ public final class Session {
 
     public func goto(_ p: Phase) { phase = p }
 
-    /// Opens a book at a page and starts a fresh reading session.
+    /// The page this session began on.
+    public private(set) var startPage = 0
+
+    /// Opens a book at a page and starts a fresh reading session. Every page
+    /// goes the same way: Pip reads it first, then the child reads it.
     public func startReading(_ book: Book, page: Int = 0) {
         clearSession()
         self.book = book
         startStars = rewards.stars
         readPageIndex = max(0, min(page, book.pages.count - 1))
-        pipPageIndex = min(readPageIndex + 1, book.pages.count - 1)
-        phase = nextPhase(after: .intro, demoPath: demoPath)
+        pipPageIndex = readPageIndex
+        startPage = readPageIndex
+        phase = .pipReads
+    }
+
+    /// Whether Pip slips on a page. Never on the first page he reads, so the
+    /// child hears a good model first, then on every other page.
+    public func pipSlips(onPage index: Int) -> Bool {
+        (index - startPage) % 2 == 1
+    }
+
+    /// Pip has read the page; now the child reads the same page.
+    public func childReadsPage() {
+        readPageIndex = pipPageIndex
+        phase = .read
+    }
+
+    /// The child has read a page: Pip reads the next one, or the book is done.
+    public func nextPage() {
+        guard readPageIndex < book.pages.count - 1 else { return finishBook() }
+        readPageIndex += 1
+        pipPageIndex = readPageIndex
+        phase = .pipReads
+    }
+
+    /// Ends the book: the feeling moment if the book has a line for it, then the report.
+    public func finishBook() {
+        phase = book.pages.contains { $0.emotionLine != nil } ? .expression : .report
     }
 
     /// After the child has read, Pip reads the page after the last one they

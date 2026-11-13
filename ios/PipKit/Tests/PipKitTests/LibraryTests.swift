@@ -30,6 +30,24 @@ final class LibraryTests: XCTestCase {
         XCTAssertEqual(s?.starsEarned, RewardEvent.pageRead(correctWords: alignment.words.count).stars)
     }
 
+    @MainActor func testEveryPageIsPipThenChild() {
+        let session = Session()
+        let book = BuiltInBooks.lionAndMouse
+        session.startReading(book)
+        XCTAssertEqual(session.phase, .pipReads)
+        XCTAssertEqual(session.pipPageIndex, 0)
+        XCTAssertFalse(session.pipSlips(onPage: 0))
+        XCTAssertTrue(session.pipSlips(onPage: 1))
+        session.childReadsPage()
+        XCTAssertEqual(session.phase, .read)
+        XCTAssertEqual(session.readPageIndex, 0)
+        session.nextPage()
+        XCTAssertEqual(session.phase, .pipReads)
+        XCTAssertEqual(session.pipPageIndex, 1)
+        for _ in 1..<book.pages.count { session.childReadsPage(); session.nextPage() }
+        XCTAssertEqual(session.phase, .expression)
+    }
+
     func testFromTextEmpty() {
         XCTAssertTrue(Book.fromText(title: "", text: "  \n ").pages.isEmpty)
     }

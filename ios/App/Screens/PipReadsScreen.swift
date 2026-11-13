@@ -55,7 +55,7 @@ struct PipReadsScreen: View {
     // MARK: Layouts
 
     private var title: some View {
-        Text("Your turn to be the teacher!")
+        Text("Listen to Pip read")
             .font(.pip(compact ? 22 : 28, .bold))
             .foregroundStyle(Palette.text)
             .lineLimit(1)
@@ -176,7 +176,7 @@ struct PipReadsScreen: View {
                     .multilineTextAlignment(compact ? .center : .leading)
                     .lineLimit(2)
             } else if finished {
-                Text("You're a great teacher!")
+                Text(catches.isEmpty ? "Now you read it to Pip!" : "You're a great teacher!")
                     .font(.pip(22, .bold))
                     .foregroundStyle(Palette.text)
             } else {
@@ -187,9 +187,9 @@ struct PipReadsScreen: View {
             }
             if !compact { Spacer() }
             if finished {
-                BigButton("Next", systemImage: "arrow.right") { session.advance() }
+                BigButton("Your turn!", systemImage: "mic.fill") { session.childReadsPage() }
             } else {
-                BigButton("Skip", variant: .quiet) { session.advance() }
+                BigButton("Skip", variant: .quiet) { session.childReadsPage() }
             }
         }
         .frame(minHeight: 80)
@@ -244,6 +244,13 @@ struct PipReadsScreen: View {
 
     private func loadPlan() async -> PipPlan? {
         guard let page else { return nil }
+        // Pip only slips on some pages; on the others he reads it right.
+        guard session.pipSlips(onPage: page.index) else {
+            var p = localPipPlan(pageIndex: page.index, pageText: page.text, patterns: [])
+            p.mistakes = []
+            p.sentences = p.sentences.map { var s = $0; s.spokenText = s.text; return s }
+            return p
+        }
         let patterns = session.diagnosis?.patterns ?? []
         if let p = try? await API.current.pipMistakes(pageIndex: page.index, pageText: page.text, patterns: patterns) {
             return p
@@ -265,13 +272,8 @@ struct PipReadsScreen: View {
         prefetch += [PipLine.didIGetItRight, .whichWord, .mixedOneUp, .celebrate1].map { .expressive($0.tagged) }
         Task { await PipPlayer.shared.prefetch(prefetch) }
 
-        // 2 minute path: only the sentence with the first mistake.
-        let order: [Int]
-        if session.demoPath == .twoMin, let first = p.mistakes.first {
-            order = [first.sentenceIndex]
-        } else {
-            order = Array(p.sentences.indices)
-        }
+        // Pip reads the whole page: it is the model the child reads next.
+        let order = Array(p.sentences.indices)
 
         for si in order {
             guard !Task.isCancelled else { return }
@@ -288,7 +290,6 @@ struct PipReadsScreen: View {
         }
         current = -1
         lit = []
-        session.catches = catches
         bubble = ""
         pipState = .celebrating
         finished = true
@@ -321,8 +322,14 @@ struct PipReadsScreen: View {
         pipState = .confused
         await say(.mixedOneUp)
         withAnimation(.spring(duration: 0.5)) { fixed.insert(m.wordIndex); flip = m.wordIndex }
-        catches.append(CatchResult(wordIndex: m.wordIndex, caught: false, via: .missed))
+        record(CatchResult(wordIndex: m.wordIndex, caught: false, via: .missed))
         await readSentence(s, spoken: false)
+    }
+
+    /// Keeps catches from every page Pip reads this session.
+    private func record(_ c: CatchResult) {
+        catches.append(c)
+        session.catches.append(c)
     }
 
     private func listen(for m: PlantedMistake) async -> Transcript {
@@ -351,8 +358,7 @@ struct PipReadsScreen: View {
         tapCaught = nil
         confetti += 1
         session.award(.mistakeCaught)
-        catches.append(CatchResult(wordIndex: m.wordIndex, caught: true, via: via))
-        session.catches = catches
+        record(CatchResult(wordIndex: m.wordIndex, caught: true, via: via))
         withAnimation(.spring(duration: 0.5)) { fixed.insert(m.wordIndex); flip = m.wordIndex }
         pipState = .celebrating
         bubble = m.reaction
