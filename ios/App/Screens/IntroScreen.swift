@@ -99,6 +99,7 @@ struct HomeTabView: View {
     @Environment(Session.self) private var session
     @Binding var tab: HomeTab
     @State private var showPractice = UserDefaults.standard.string(forKey: "PipSheet") == "practice"
+    @State private var adding = false
     private var library: Library { .shared }
 
     var body: some View {
@@ -111,7 +112,7 @@ struct HomeTabView: View {
             }
 
             HStack(alignment: .top) {
-                CategoryButton(title: "Books", systemImage: "book.fill", colors: Palette.purpleOrb) { tab = .library }
+                CategoryButton(title: "Add book", systemImage: "camera.fill", colors: Palette.purpleOrb) { adding = true }
                 Spacer()
                 CategoryButton(title: "Read", systemImage: "mic.fill", colors: Palette.blueOrb) { startContinue() }
                 Spacer()
@@ -132,6 +133,7 @@ struct HomeTabView: View {
             }
         }
         .sheet(isPresented: $showPractice) { PracticeScreen().environment(session) }
+        .sheet(isPresented: $adding) { AddBookView() }
     }
 
     private var greeting: String {
@@ -272,9 +274,11 @@ struct ProgressTabView: View {
                             Spacer()
                             Text(s.date, style: .date).font(.pip(13, .semibold)).foregroundStyle(.white.opacity(0.7))
                         }
-                        Text("\(s.wordsCorrect) of \(s.wordsTotal) words  ·  \(s.pages) \(s.pages == 1 ? "page" : "pages")"
-                             + (s.wcpm.map { "  ·  \(Int($0)) words a minute" } ?? ""))
-                            .font(.pip(14, .semibold)).foregroundStyle(.white.opacity(0.85))
+                        HStack(spacing: 6) {
+                            MetaChip(systemImage: "checkmark", text: "\(s.wordsCorrect) of \(s.wordsTotal) words")
+                            MetaChip(systemImage: "book.pages.fill", text: "\(s.pages) \(s.pages == 1 ? "page" : "pages")")
+                            if let w = s.wcpm { MetaChip(systemImage: "speedometer", text: "\(Int(w))/min") }
+                        }
                         if let sound = s.trickySound {
                             Text("Practicing: \(sound)" + (s.trickyWords.isEmpty ? "" : " (\(s.trickyWords.prefix(3).joined(separator: ", ")))"))
                                 .font(.pip(14, .semibold)).foregroundStyle(Palette.sun)
