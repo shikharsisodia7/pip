@@ -16,6 +16,7 @@ struct ReadScreen: View {
     @State private var thinking = false
     @State private var message: String?
     @State private var error: String?
+    @State private var confetti = 0
 
     private var book: Book { session.book }
     private var index: Int { session.readPageIndex }
@@ -74,6 +75,9 @@ struct ReadScreen: View {
             if UserDefaults.standard.bool(forKey: "PipAutoListen") { toggle() }
             if UserDefaults.standard.bool(forKey: "PipSampleRead") { sampleReading() }
             #endif
+        }
+        .overlay {
+            if confetti > 0 { Celebration().id(confetti).allowsHitTesting(false) }
         }
         .onChange(of: index) { resetPage() }
     }
@@ -246,6 +250,7 @@ struct ReadScreen: View {
         Library.shared.markRead(book.id, page: index)
         finalMarks = PipKit.marks(for: alignment)
         withAnimation(.spring) { finished = true }
+        confetti += 1
         session.award(.pageRead(correctWords: metrics.wordsCorrect))
 
         thinking = true
